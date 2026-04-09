@@ -764,6 +764,14 @@ function fallbackCopy(text){
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2000);}
 
 init();
+
+// 날짜 자동 갱신 - 화면 켜거나 탭 포커스 시 체크
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'){
+    const today=todayLocal();
+    if(viewDate!==today){viewDate=today;updateDateLabel();loadEvents();renderAllBoards();}
+  }
+});
 </script>
 </body>
 </html>
