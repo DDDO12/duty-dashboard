@@ -448,16 +448,28 @@ function saveToken(){
 }
 function resetToken(){localStorage.removeItem('gh_token');location.reload();}
 
+function b64decode(b64){
+  const bin=atob(b64);
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+  return new TextDecoder('utf-8').decode(bytes);
+}
+function b64encode(str){
+  const bytes=new TextEncoder().encode(str);
+  let bin='';
+  bytes.forEach(b=>{bin+=String.fromCharCode(b);});
+  return btoa(bin);
+}
 async function ghGet(path){
   const r=await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path+'?ref='+BRANCH,{
     headers:{'Authorization':'token '+TOKEN,'Accept':'application/vnd.github.v3+json'}
   });
   if(r.status===404)return null;
   const d=await r.json();
-  return{content:JSON.parse(atob(d.content)),sha:d.sha};
+  return{content:JSON.parse(b64decode(d.content)),sha:d.sha};
 }
 async function ghPut(path,content,sha,msg){
-  const body={message:msg,content:btoa(unescape(encodeURIComponent(JSON.stringify(content,null,2)))),branch:BRANCH};
+  const body={message:msg,content:b64encode(JSON.stringify(content,null,2)),branch:BRANCH};
   if(sha)body.sha=sha;
   const r=await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path,{
     method:'PUT',headers:{'Authorization':'token '+TOKEN,'Content-Type':'application/json'},
