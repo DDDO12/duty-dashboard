@@ -286,25 +286,45 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
   </div>
 
   <div class="page" id="page-settings">
-    <div class="card">
-      <div class="card-title">인원 관리</div>
-      <div id="personnelList"></div>
-      <div class="add-row"><input id="newPersonName" placeholder="이름 입력"><button onclick="addPerson()">추가</button></div>
+    <div class="entry-add-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s1')">
+        <span class="card-title" style="margin:0;">인원 관리 (대상자 1)</span>
+        <span class="material-icons-round" id="s1-icon" style="color:#1a73e8;font-size:20px;">expand_more</span>
+      </div>
+      <div id="s1-body" style="display:none;margin-top:12px;">
+        <div id="personnelList"></div>
+        <div class="add-row"><input id="newPersonName" placeholder="이름 입력"><button onclick="addPerson()">추가</button></div>
+      </div>
     </div>
-    <div class="card" style="margin-top:12px;">
-      <div class="card-title">출입 유형 관리</div>
-      <div id="entryTypeList"></div>
-      <div class="add-row"><input id="newEntryType" placeholder="유형 이름 (예: 탄약고)"><button onclick="addEntryType()">추가</button></div>
+    <div class="entry-add-card" style="margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s2')">
+        <span class="card-title" style="margin:0;">인원 관리 (대상자 2)</span>
+        <span class="material-icons-round" id="s2-icon" style="color:#1a73e8;font-size:20px;">expand_more</span>
+      </div>
+      <div id="s2-body" style="display:none;margin-top:12px;">
+        <div id="personnel2List"></div>
+        <div class="add-row"><input id="newPerson2Name" placeholder="이름 입력"><button onclick="addPerson2()">추가</button></div>
+      </div>
     </div>
-    <div class="card" style="margin-top:12px;">
-      <div class="card-title">열쇠 프리셋</div>
-      <div id="keyPresetList"></div>
-      <div class="add-row"><input id="newKeyPreset" placeholder="열쇠 이름"><button style="background:#f9ab00;" onclick="addKeyPreset()">추가</button></div>
+    <div class="entry-add-card" style="margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s3')">
+        <span class="card-title" style="margin:0;">출입 유형 관리</span>
+        <span class="material-icons-round" id="s3-icon" style="color:#1a73e8;font-size:20px;">expand_more</span>
+      </div>
+      <div id="s3-body" style="display:none;margin-top:12px;">
+        <div id="entryTypeList"></div>
+        <div class="add-row"><input id="newEntryType" placeholder="유형 이름 (예: 탄약고)"><button onclick="addEntryType()">추가</button></div>
+      </div>
     </div>
-    <div class="card" style="margin-top:12px;">
-      <div class="card-title">대상자 2 관리</div>
-      <div id="personnel2List"></div>
-      <div class="add-row"><input id="newPerson2Name" placeholder="이름 입력"><button onclick="addPerson2()">추가</button></div>
+    <div class="entry-add-card" style="margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s4')">
+        <span class="card-title" style="margin:0;">열쇠 프리셋</span>
+        <span class="material-icons-round" id="s4-icon" style="color:#f9ab00;font-size:20px;">expand_more</span>
+      </div>
+      <div id="s4-body" style="display:none;margin-top:12px;">
+        <div id="keyPresetList"></div>
+        <div class="add-row"><input id="newKeyPreset" placeholder="열쇠 이름"><button style="background:#f9ab00;" onclick="addKeyPreset()">추가</button></div>
+      </div>
     </div>
   </div>
 
@@ -724,6 +744,16 @@ async function addKeyPreset(){const n=document.getElementById('newKeyPreset').va
 async function removeKeyPreset(i){const bk=[...keyPresets];keyPresets.splice(i,1);if(await savePersonnel()){renderKeyPresets();renderSettings();}else{keyPresets=bk;toast('저장 실패. 토큰을 확인해주세요.');renderSettings();}}
 async function addEntryType(){const n=document.getElementById('newEntryType').value.trim();if(!n)return;entryTypes.push(n);document.getElementById('newEntryType').value='';if(await savePersonnel()){renderSettings();renderEntryForm();}else{entryTypes.pop();document.getElementById('newEntryType').value=n;toast('저장 실패. 토큰을 확인해주세요.');}}
 async function removeEntryType(i){const bk=[...entryTypes];entryTypes.splice(i,1);if(await savePersonnel()){renderSettings();renderEntryForm();}else{entryTypes=bk;toast('저장 실패. 토큰을 확인해주세요.');renderSettings();}}
+
+// ── 설정 섹션 토글 ──
+function toggleSetting(id){
+  const body=document.getElementById(id+'-body');
+  const icon=document.getElementById(id+'-icon');
+  if(!body)return;
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  icon.textContent=open?'expand_more':'expand_less';
+}
 
 // ── 토글 접기/펼치기 ──
 function toggleAddForm(ctx){
