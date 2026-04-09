@@ -583,8 +583,9 @@ function renderBoard(category, boardId, typeColor){
     const time=fmtTime(elapsed);
     const tc=typeColor||'#1a73e8';
     const editBtn='<button style="background:#78909c;width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-right:4px;" onclick="editBoard('+id+')"><span class="material-icons-round" style="font-size:18px;color:#fff;">edit</span></button>';
+    const delBtn='<button style="background:#ea4335;width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:4px;" onclick="deleteBoardTimer('+id+')"><span class="material-icons-round" style="font-size:18px;color:#fff;">delete</span></button>';
     if(t.done){
-      return '<div class="entry-row done">'+editBtn+'<span class="entry-type" style="background:'+tc+'">'+t.type+'</span><span class="entry-persons">'+t.persons+'</span><span class="entry-timer">'+time+'</span>'+(t.note?'<span style="font-size:12px;color:#999;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+t.note+'">'+t.note+'</span>':'')+'<span class="entry-check material-icons-round">check_circle</span></div>';
+      return '<div class="entry-row done">'+editBtn+'<span class="entry-type" style="background:'+tc+'">'+t.type+'</span><span class="entry-persons">'+t.persons+'</span><span class="entry-timer">'+time+'</span>'+(t.note?'<span style="font-size:12px;color:#999;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+t.note+'">'+t.note+'</span>':'')+delBtn+'</div>';
     }
     const running=!t.paused;
     let noteBtn='';
@@ -595,7 +596,8 @@ function renderBoard(category, boardId, typeColor){
       +noteBtn
       +(running?'<button class="btn-pause" onclick="pauseBoard('+id+')"><span class="material-icons-round">pause</span></button>'
                :'<button class="btn-play" onclick="resumeBoard('+id+')"><span class="material-icons-round">play_arrow</span></button>')
-      +'<button class="btn-stop-entry" onclick="stopBoard('+id+')"><span class="material-icons-round">stop</span></button></div></div>';
+      +'<button class="btn-stop-entry" onclick="stopBoard('+id+')"><span class="material-icons-round">stop</span></button>'
+      +'<button style="background:#ea4335;width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;" onclick="deleteBoardTimer('+id+')"><span class="material-icons-round" style="font-size:18px;color:#fff;">delete</span></button></div></div>';
   }).join('');
 }
 function renderEntryBoard(){renderBoard('entry','entryBoard','#1a73e8');}
@@ -722,11 +724,19 @@ function renderKeyBoard(){
   const sorted=[...issued].sort((a,b)=>(a.matched?1:0)-(b.matched?1:0)||b.time.localeCompare(a.time));
   board.innerHTML=sorted.map(is=>{
     const label=is.subject+(is.subject2?' / '+is.subject2:'');
+    const delBtn='<button style="background:#ea4335;border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:6px;flex-shrink:0;" onclick="deleteKeyEvent('+events.indexOf(is)+')"><span class="material-icons-round" style="font-size:16px;color:#fff;">delete</span></button>';
     if(is.matched){
-      return '<div class="entry-row done"><span class="entry-type" style="background:#4285f4;">반납</span><span class="entry-persons">'+label+'</span><span style="font-size:13px;color:#666;">'+is.location+'</span><span style="font-size:12px;color:#999;margin-left:auto;">'+is.time+' ~ '+is.returnTime+'</span><span class="entry-check material-icons-round">check_circle</span></div>';
+      return '<div class="entry-row done"><span class="entry-type" style="background:#4285f4;">반납</span><span class="entry-persons">'+label+'</span><span style="font-size:13px;color:#666;">'+is.location+'</span><span style="font-size:12px;color:#999;margin-left:auto;">'+is.time+' ~ '+is.returnTime+'</span>'+delBtn+'</div>';
     }
-    return '<div class="entry-row"><span class="entry-type" style="background:#f9ab00;">수령</span><span class="entry-persons">'+label+'</span><span style="font-size:13px;color:#666;">'+is.location+'</span><span style="font-size:12px;color:#1a73e8;margin-left:auto;">'+is.time+'</span><button style="background:#4285f4;color:#fff;border:none;padding:6px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;margin-left:8px;" onclick="returnKey(\''+is.subject+'\',\''+is.location+'\')">반납</button></div>';
+    return '<div class="entry-row"><span class="entry-type" style="background:#f9ab00;">수령</span><span class="entry-persons">'+label+'</span><span style="font-size:13px;color:#666;">'+is.location+'</span><span style="font-size:12px;color:#1a73e8;margin-left:auto;">'+is.time+'</span><button style="background:#4285f4;color:#fff;border:none;padding:6px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;margin-left:8px;" onclick="returnKey(\''+is.subject+'\',\''+is.location+'\')">반납</button>'+delBtn+'</div>';
   }).join('');
+}
+async function deleteKeyEvent(idx){
+  if(idx<0||idx>=events.length)return;
+  if(!confirm('삭제할까요?'))return;
+  const bk=[...events];events.splice(idx,1);
+  if(await saveEvents()){toast('삭제');renderTimeline();renderKeyBoard();}
+  else{events=bk;toast('저장 실패.');renderKeyBoard();}
 }
 async function returnKey(subject,location){
   events.push({time:nowTime(),type:'key',action:'return',subject,location});
@@ -777,6 +787,14 @@ function editBoard(id){
   if(newNote!==null)t.note=newNote;
   saveBoardState();renderAllBoards();
   toast('수정 완료');
+}
+function deleteBoardTimer(id){
+  if(!confirm('삭제할까요?'))return;
+  const t=boardTimers[id];if(!t)return;
+  clearInterval(t.interval);
+  delete boardTimers[id];
+  saveBoardState();renderAllBoards();
+  toast('삭제');
 }
 
 function syncToMaru(){
