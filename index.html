@@ -124,13 +124,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
 .note-input:focus{outline:none;border-color:#1a73e8;background:#fff;}
 
 /* Settings */
-.setting-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0;}
+.setting-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0;transition:background 0.15s;touch-action:none;user-select:none;}
+.setting-item.drag-over{background:#e8f0fe;border-radius:8px;}
+.setting-item.dragging{opacity:0.4;}
 .setting-item span{font-size:15px;flex:1;}
 .setting-del{color:#ea4335;font-size:13px;font-weight:600;cursor:pointer;padding:4px 12px;border-radius:16px;flex-shrink:0;}
 .setting-del:active{background:#fce8e6;}
-.setting-order{display:flex;flex-direction:column;gap:2px;margin-right:6px;flex-shrink:0;}
-.setting-order button{background:none;border:none;padding:0;cursor:pointer;line-height:1;color:#999;font-size:16px;}
-.setting-order button:active{color:#1a73e8;}
+.drag-handle{color:#ccc;font-size:20px;cursor:grab;padding:0 8px 0 0;flex-shrink:0;line-height:1;}
+.drag-handle:active{cursor:grabbing;color:#1a73e8;}
 .add-row{display:flex;gap:8px;margin-top:12px;}
 .add-row input{flex:1;padding:10px 14px;border:1px solid #e0e0e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';}
 .add-row input:focus{outline:none;border-color:#1a73e8;background:#fff;}
@@ -680,28 +681,72 @@ function renderKeyPresets(){
   const el=document.getElementById('keyPresets');if(!el)return;
   el.innerHTML=keyPresets.map(k=>'<div class="preset-btn" onclick="selectKey(\''+k+'\')" id="kp-'+k+'">'+k+'</div>').join('');
 }
-function orderBtns(up,dn){return '<div class="setting-order"><button onclick="'+up+'">▲</button><button onclick="'+dn+'">▼</button></div>';}
-function renderSettings(){
-  const n=personnel.length;
-  document.getElementById('personnelList').innerHTML=personnel.map((p,i)=>
-    '<div class="setting-item">'+orderBtns('moveItem(personnel,'+i+',-1,\'p1\')','moveItem(personnel,'+i+',1,\'p1\')')+'<span>'+p.name+'</span><span class="setting-del" onclick="removePerson('+i+')">삭제</span></div>').join('');
-  const n2=keyPresets.length;
-  document.getElementById('keyPresetList').innerHTML=keyPresets.map((k,i)=>
-    '<div class="setting-item">'+orderBtns('moveItem(keyPresets,'+i+',-1,\'kp\')','moveItem(keyPresets,'+i+',1,\'kp\')')+'<span>'+k+'</span><span class="setting-del" onclick="removeKeyPreset('+i+')">삭제</span></div>').join('');
-  const n3=entryTypes.length;
-  document.getElementById('entryTypeList').innerHTML=entryTypes.map((t,i)=>
-    '<div class="setting-item">'+orderBtns('moveItem(entryTypes,'+i+',-1,\'et\')','moveItem(entryTypes,'+i+',1,\'et\')')+'<span>'+t+'</span><span class="setting-del" onclick="removeEntryType('+i+')">삭제</span></div>').join('');
-  const n4=personnel2.length;
-  document.getElementById('personnel2List').innerHTML=personnel2.map((p,i)=>
-    '<div class="setting-item">'+orderBtns('moveItem(personnel2,'+i+',-1,\'p2\')','moveItem(personnel2,'+i+',1,\'p2\')')+'<span>'+p.name+'</span><span class="setting-del" onclick="removePerson2('+i+')">삭제</span></div>').join('');
+function renderSettingList(elId, arr, labelFn, deleteFn, tag){
+  const el=document.getElementById(elId);if(!el)return;
+  el.innerHTML=arr.map((item,i)=>
+    '<div class="setting-item" data-idx="'+i+'" data-tag="'+tag+'">'
+    +'<span class="drag-handle">&#9776;</span>'
+    +'<span>'+labelFn(item)+'</span>'
+    +'<span class="setting-del" onclick="'+deleteFn+'('+i+')">삭제</span>'
+    +'</div>').join('');
+  setupSettingDrag(el, arr, tag);
 }
-function moveItem(arr,i,dir,tag){
-  const j=i+dir;if(j<0||j>=arr.length)return;
-  [arr[i],arr[j]]=[arr[j],arr[i]];
-  savePersonnel();renderSettings();
-  if(tag==='p1'||tag==='p2')_refreshPersonViews();
-  if(tag==='et')renderEntryForm();
-  if(tag==='kp'){renderKeyPresets();renderPersonButtons();}
+function renderSettings(){
+  renderSettingList('personnelList',personnel,p=>p.name,'removePerson','p1');
+  renderSettingList('keyPresetList',keyPresets,k=>k,'removeKeyPreset','kp');
+  renderSettingList('entryTypeList',entryTypes,t=>t,'removeEntryType','et');
+  renderSettingList('personnel2List',personnel2,p=>p.name,'removePerson2','p2');
+}
+function setupSettingDrag(container, arr, tag){
+  let dragIdx=null, overIdx=null;
+  // 공통 콜백
+  function applyReorder(){
+    if(dragIdx===null||overIdx===null||dragIdx===overIdx)return;
+    const moved=arr.splice(dragIdx,1)[0];arr.splice(overIdx,0,moved);
+    savePersonnel();renderSettings();
+    if(tag==='p1'||tag==='p2')_refreshPersonViews();
+    if(tag==='et')renderEntryForm();
+    if(tag==='kp'){renderKeyPresets();renderPersonButtons();}
+    dragIdx=overIdx=null;
+  }
+  // ── 마우스 드래그 ──
+  container.querySelectorAll('.setting-item').forEach((row,i)=>{
+    const handle=row.querySelector('.drag-handle');
+    handle.addEventListener('mousedown',e=>{
+      e.preventDefault();
+      dragIdx=i;row.classList.add('dragging');
+      function onMove(ev){
+        container.querySelectorAll('.setting-item').forEach((r,j)=>{
+          const rect=r.getBoundingClientRect();
+          if(ev.clientY>=rect.top&&ev.clientY<rect.bottom){overIdx=j;r.classList.add('drag-over');}
+          else r.classList.remove('drag-over');
+        });
+      }
+      function onUp(){
+        container.querySelectorAll('.setting-item').forEach(r=>{r.classList.remove('drag-over','dragging');});
+        document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);
+        applyReorder();
+      }
+      document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
+    });
+    // ── 터치 드래그 ──
+    handle.addEventListener('touchstart',e=>{
+      e.preventDefault();dragIdx=i;row.classList.add('dragging');
+    },{passive:false});
+    handle.addEventListener('touchmove',e=>{
+      e.preventDefault();
+      const t=e.touches[0];
+      container.querySelectorAll('.setting-item').forEach((r,j)=>{
+        const rect=r.getBoundingClientRect();
+        if(t.clientY>=rect.top&&t.clientY<rect.bottom){overIdx=j;r.classList.add('drag-over');}
+        else r.classList.remove('drag-over');
+      });
+    },{passive:false});
+    handle.addEventListener('touchend',e=>{
+      container.querySelectorAll('.setting-item').forEach(r=>{r.classList.remove('drag-over','dragging');});
+      applyReorder();
+    });
+  });
 }
 
 function selectPerson(ctx,name){
