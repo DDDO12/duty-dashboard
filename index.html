@@ -1,48 +1,52 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>실시사항</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <style>
-:root {
-  --bg: #1a1a2e; --card: #16213e; --accent: #0f3460;
-  --blue: #4a9eff; --green: #4caf50; --red: #ef5350;
-  --orange: #ff9800; --purple: #ab47bc; --text: #e0e0e0;
-  --dim: #888;
-}
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
-  font-family: -apple-system, 'Noto Sans KR', sans-serif;
-  background: var(--bg); color: var(--text);
-  min-height: 100vh; padding-bottom: 80px;
-}
-.header {
-  background: var(--card); padding: 16px;
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid #333; position: sticky; top:0; z-index:10;
-}
-.header h1 { font-size: 18px; }
-.header .date { color: var(--blue); font-size: 14px; }
-.header .sync-btn {
-  background: var(--accent); border: 1px solid var(--blue);
-  color: var(--blue); padding: 6px 12px; border-radius: 6px;
-  font-size: 13px; cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  background: #f5f5f5; color: #222;
+  min-height: 100vh; padding-bottom: 72px;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Tab Navigation */
-.tabs {
-  display: flex; background: var(--card);
-  border-bottom: 1px solid #333; overflow-x: auto;
+/* Header */
+.header {
+  background: #fff; padding: 14px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  position: sticky; top: 0; z-index: 10;
 }
-.tab {
-  flex: 1; padding: 12px 8px; text-align: center;
-  font-size: 13px; color: var(--dim); cursor: pointer;
-  border-bottom: 2px solid transparent; min-width: 70px;
-  white-space: nowrap;
+.header-left h1 { font-size: 20px; font-weight: 700; color: #1a73e8; }
+.header-left .date { font-size: 13px; color: #666; margin-top: 2px; }
+.sync-btn {
+  background: #1a73e8; border: none; color: #fff;
+  padding: 8px 16px; border-radius: 20px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; gap: 4px;
 }
-.tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+.sync-btn .material-icons-round { font-size: 16px; }
+
+/* Bottom Nav */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #fff; display: flex;
+  box-shadow: 0 -1px 3px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+.nav-item {
+  flex: 1; padding: 8px 0 6px; text-align: center;
+  cursor: pointer; color: #999; font-size: 11px;
+}
+.nav-item .material-icons-round { display: block; font-size: 22px; margin: 0 auto 2px; }
+.nav-item.active { color: #1a73e8; }
 
 /* Pages */
 .page { display: none; padding: 16px; }
@@ -50,12 +54,13 @@ body {
 
 /* Cards */
 .card {
-  background: var(--card); border-radius: 10px;
-  padding: 16px; margin-bottom: 12px;
+  background: #fff; border-radius: 12px;
+  padding: 20px; margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 .card-title {
-  font-size: 14px; color: var(--blue); margin-bottom: 12px;
-  font-weight: 600;
+  font-size: 13px; color: #666; margin-bottom: 12px;
+  font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
 }
 
 /* Person Selector */
@@ -64,180 +69,247 @@ body {
   margin-bottom: 16px;
 }
 .person-btn {
-  background: var(--accent); border: 1px solid #444;
-  color: var(--text); padding: 10px 4px; border-radius: 8px;
-  font-size: 14px; cursor: pointer; text-align: center;
+  background: #f0f0f0; border: 2px solid transparent;
+  color: #444; padding: 12px 6px; border-radius: 10px;
+  font-size: 15px; font-weight: 500; cursor: pointer;
+  text-align: center; transition: all 0.15s;
 }
 .person-btn.selected {
-  border-color: var(--blue); background: rgba(74,158,255,0.2);
-  color: var(--blue); font-weight: 600;
+  border-color: #1a73e8; background: #e8f0fe;
+  color: #1a73e8; font-weight: 700;
 }
 
 /* Action Buttons */
 .action-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
   margin-bottom: 16px;
 }
 .action-btn {
-  padding: 12px 8px; border-radius: 8px; border: none;
-  font-size: 14px; font-weight: 600; cursor: pointer;
-  color: #fff;
+  padding: 14px 8px; border-radius: 10px; border: none;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  color: #fff; transition: opacity 0.15s;
 }
-.action-btn.entry { background: var(--green); }
-.action-btn.exit { background: var(--red); }
-.action-btn.leave { background: var(--orange); }
-.action-btn.return { background: var(--blue); }
-.action-btn.transfer { background: var(--purple); }
+.action-btn:active { opacity: 0.8; }
+.action-btn.entry { background: #34a853; }
+.action-btn.exit { background: #ea4335; }
+.action-btn.leave { background: #f9ab00; }
+.action-btn.return { background: #4285f4; }
+.action-btn.transfer { background: #9334e6; }
 
 /* Timer */
+.timer-card { text-align: center; }
 .timer-display {
-  text-align: center; font-size: 36px; font-weight: 700;
-  color: var(--blue); padding: 20px 0;
+  font-size: 48px; font-weight: 700;
+  color: #888; padding: 24px 0;
   font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
 }
-.timer-display.running { color: var(--green); }
-.timer-btns {
-  display: flex; gap: 10px; justify-content: center;
-}
+.timer-display.running { color: #34a853; }
+.timer-btns { display: flex; gap: 12px; justify-content: center; margin-top: 8px; }
 .timer-btns button {
-  padding: 14px 28px; border-radius: 10px; border: none;
-  font-size: 16px; font-weight: 600; cursor: pointer; color: #fff;
-  min-width: 100px;
+  padding: 14px 32px; border-radius: 24px; border: none;
+  font-size: 16px; font-weight: 700; cursor: pointer; color: #fff;
+  min-width: 110px; transition: opacity 0.15s;
 }
-.btn-start { background: var(--green); }
-.btn-stop { background: var(--red); }
-.btn-abort { background: #666; }
+.timer-btns button:active { opacity: 0.8; }
+.btn-start { background: #34a853; }
+.btn-stop { background: #ea4335; }
+.btn-abort { background: #999; }
+
+/* Type Toggle */
+.type-toggle {
+  display: flex; background: #f0f0f0; border-radius: 10px;
+  padding: 4px; margin-bottom: 20px;
+}
+.type-toggle button {
+  flex: 1; padding: 10px; border: none; border-radius: 8px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  background: transparent; color: #666; transition: all 0.2s;
+}
+.type-toggle button.selected {
+  background: #fff; color: #1a73e8;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
 
 /* Timeline */
 .timeline-item {
-  display: flex; align-items: flex-start; padding: 10px 0;
-  border-bottom: 1px solid #222;
+  display: flex; align-items: center; padding: 14px 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 .timeline-time {
-  font-size: 13px; color: var(--blue); min-width: 55px;
-  font-variant-numeric: tabular-nums;
+  font-size: 14px; color: #1a73e8; font-weight: 600;
+  min-width: 50px; font-variant-numeric: tabular-nums;
 }
 .timeline-tag {
-  font-size: 11px; padding: 2px 6px; border-radius: 4px;
-  margin: 0 8px; min-width: 40px; text-align: center;
-  font-weight: 600;
+  font-size: 11px; padding: 3px 8px; border-radius: 12px;
+  margin: 0 10px; min-width: 44px; text-align: center;
+  font-weight: 700;
 }
-.tag-entry { background: rgba(76,175,80,0.2); color: var(--green); }
-.tag-patrol { background: rgba(74,158,255,0.2); color: var(--blue); }
-.tag-cctv { background: rgba(171,71,188,0.2); color: var(--purple); }
-.tag-key { background: rgba(255,152,0,0.2); color: var(--orange); }
-.tag-overtime { background: rgba(239,83,80,0.2); color: var(--red); }
-.timeline-desc { font-size: 14px; flex: 1; }
+.tag-entry { background: #e6f4ea; color: #137333; }
+.tag-patrol { background: #e8f0fe; color: #1967d2; }
+.tag-cctv { background: #f3e8fd; color: #7627bb; }
+.tag-key { background: #fef7e0; color: #b06000; }
+.tag-overtime { background: #fce8e6; color: #c5221f; }
+.timeline-desc { font-size: 14px; flex: 1; color: #333; }
+.timeline-del {
+  color: #ccc; font-size: 18px; cursor: pointer;
+  padding: 4px 8px; border-radius: 50%;
+}
+.timeline-del:active { background: #f0f0f0; color: #ea4335; }
 
-/* Note input */
-.note-input {
-  width: 100%; background: var(--accent); border: 1px solid #444;
-  color: var(--text); padding: 10px; border-radius: 8px;
-  font-size: 14px; margin-top: 8px; resize: none;
-}
-
-/* Key presets */
-.preset-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
-  margin-bottom: 12px;
-}
-.preset-btn {
-  background: var(--accent); border: 1px solid #444;
-  color: var(--text); padding: 8px 4px; border-radius: 6px;
-  font-size: 13px; cursor: pointer; text-align: center;
-}
-.preset-btn.selected {
-  border-color: var(--orange); background: rgba(255,152,0,0.2);
-  color: var(--orange);
-}
-
-/* Toast */
-.toast {
-  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-  background: rgba(0,0,0,0.85); color: #fff; padding: 12px 24px;
-  border-radius: 8px; font-size: 14px; z-index: 100;
-  display: none; max-width: 90%;
-}
-.toast.show { display: block; animation: fadeInOut 2s; }
-@keyframes fadeInOut {
-  0%{opacity:0} 10%{opacity:1} 80%{opacity:1} 100%{opacity:0}
-}
-
-/* Setup (token) */
-.setup-page {
-  padding: 40px 20px; text-align: center;
-}
-.setup-page input {
-  width: 100%; padding: 12px; background: var(--card);
-  border: 1px solid #444; color: var(--text); border-radius: 8px;
-  font-size: 14px; margin: 16px 0;
-}
-.setup-page button {
-  background: var(--blue); color: #fff; border: none;
-  padding: 12px 32px; border-radius: 8px; font-size: 16px;
-  cursor: pointer;
-}
-
-/* Summary stats */
+/* Stats */
 .stats-row {
   display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
 }
 .stat-badge {
-  background: var(--accent); padding: 6px 12px; border-radius: 16px;
-  font-size: 13px;
+  background: #e8f0fe; color: #1967d2; padding: 6px 14px;
+  border-radius: 20px; font-size: 13px; font-weight: 600;
 }
 
-/* Delete button on timeline */
-.timeline-del {
-  color: var(--red); font-size: 12px; cursor: pointer;
-  padding: 2px 6px; opacity: 0.6;
+/* Note input */
+.note-input {
+  width: 100%; background: #f8f8f8; border: 1px solid #e0e0e0;
+  color: #333; padding: 12px; border-radius: 10px;
+  font-size: 14px; margin-top: 12px; resize: none;
+  font-family: 'Noto Sans KR', sans-serif;
 }
+.note-input:focus { outline: none; border-color: #1a73e8; background: #fff; }
+
+/* Key presets */
+.preset-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  margin-bottom: 16px;
+}
+.preset-btn {
+  background: #f0f0f0; border: 2px solid transparent;
+  color: #444; padding: 10px 4px; border-radius: 8px;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  text-align: center; transition: all 0.15s;
+}
+.preset-btn.selected {
+  border-color: #f9ab00; background: #fef7e0; color: #b06000;
+}
+
+/* Key action buttons */
+.key-actions {
+  display: flex; gap: 12px; justify-content: center; margin-top: 20px;
+}
+.key-actions button {
+  padding: 14px 32px; border-radius: 24px; border: none;
+  font-size: 16px; font-weight: 700; cursor: pointer; color: #fff;
+  min-width: 110px;
+}
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: #333; color: #fff; padding: 12px 24px;
+  border-radius: 24px; font-size: 14px; font-weight: 500; z-index: 100;
+  display: none; max-width: 85%; text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.toast.show { display: block; animation: fadeInOut 2s; }
+@keyframes fadeInOut {
+  0%{opacity:0;transform:translateX(-50%) translateY(10px)}
+  10%{opacity:1;transform:translateX(-50%) translateY(0)}
+  80%{opacity:1} 100%{opacity:0}
+}
+
+/* Setup */
+.setup-page {
+  padding: 60px 24px; text-align: center;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: 80vh;
+}
+.setup-page .icon { font-size: 64px; color: #1a73e8; margin-bottom: 16px; }
+.setup-page h2 { font-size: 22px; margin-bottom: 8px; }
+.setup-page p { color: #666; font-size: 14px; margin-bottom: 24px; }
+.setup-page input {
+  width: 100%; max-width: 320px; padding: 14px 16px;
+  background: #fff; border: 2px solid #e0e0e0;
+  color: #333; border-radius: 12px; font-size: 15px;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.setup-page input:focus { outline: none; border-color: #1a73e8; }
+.setup-page .submit-btn {
+  background: #1a73e8; color: #fff; border: none;
+  padding: 14px 48px; border-radius: 24px; font-size: 16px;
+  font-weight: 700; cursor: pointer; margin-top: 16px;
+}
+
+/* Settings list */
+.setting-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 0; border-bottom: 1px solid #f0f0f0;
+}
+.setting-item span { font-size: 15px; }
+.setting-del {
+  color: #ea4335; font-size: 13px; font-weight: 600;
+  cursor: pointer; padding: 4px 12px; border-radius: 16px;
+}
+.setting-del:active { background: #fce8e6; }
+.add-row {
+  display: flex; gap: 8px; margin-top: 12px;
+}
+.add-row input {
+  flex: 1; padding: 10px 14px; border: 1px solid #e0e0e0;
+  border-radius: 10px; font-size: 14px; background: #f8f8f8;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.add-row input:focus { outline: none; border-color: #1a73e8; background: #fff; }
+.add-row button {
+  background: #34a853; color: #fff; border: none;
+  padding: 10px 18px; border-radius: 10px; font-size: 14px;
+  font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center; padding: 48px 20px; color: #999;
+}
+.empty-state .material-icons-round { font-size: 48px; margin-bottom: 12px; color: #ddd; }
+.empty-state p { font-size: 15px; }
 </style>
 </head>
 <body>
 
 <!-- Setup Screen -->
 <div id="setup" class="setup-page" style="display:none;">
+  <span class="material-icons-round icon">lock_open</span>
   <h2>GitHub 연결</h2>
-  <p style="color:var(--dim);margin-top:12px;">duty-log 레포 접근용 토큰</p>
+  <p>duty-log 레포 접근용 토큰을 입력하세요</p>
   <input id="tokenInput" type="password" placeholder="GitHub Personal Access Token">
-  <br>
-  <button onclick="saveToken()">연결</button>
+  <button class="submit-btn" onclick="saveToken()">연결하기</button>
 </div>
 
 <!-- Main App -->
 <div id="app" style="display:none;">
   <div class="header">
-    <div>
+    <div class="header-left">
       <h1>실시사항</h1>
       <div class="date" id="todayDate"></div>
     </div>
-    <button class="sync-btn" onclick="syncToMaru()">마루 동기화</button>
+    <button class="sync-btn" onclick="syncToMaru()">
+      <span class="material-icons-round">sync</span> 동기화
+    </button>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" data-page="timeline">타임라인</div>
-    <div class="tab" data-page="entry">출입</div>
-    <div class="tab" data-page="patrol">순찰</div>
-    <div class="tab" data-page="keys">열쇠</div>
-    <div class="tab" data-page="overtime">초과근무</div>
-    <div class="tab" data-page="settings">설정</div>
-  </div>
-
-  <!-- Timeline Page -->
+  <!-- Pages -->
   <div class="page active" id="page-timeline">
     <div class="stats-row" id="statsRow"></div>
     <div id="timelineList"></div>
-    <div style="text-align:center;color:var(--dim);padding:20px;" id="emptyMsg">
-      기록이 없어요
+    <div class="empty-state" id="emptyMsg">
+      <span class="material-icons-round">event_note</span>
+      <p>아직 기록이 없어요</p>
     </div>
   </div>
 
-  <!-- Entry Page -->
   <div class="page" id="page-entry">
     <div class="card">
-      <div class="card-title">대상자</div>
+      <div class="card-title">대상자 선택</div>
       <div class="person-grid" id="entryPersons"></div>
+    </div>
+    <div class="card">
       <div class="card-title">기록 유형</div>
       <div class="action-grid">
         <button class="action-btn entry" onclick="addEntry('입장')">입장</button>
@@ -250,13 +322,11 @@ body {
     </div>
   </div>
 
-  <!-- Patrol Page -->
   <div class="page" id="page-patrol">
-    <div class="card">
-      <div class="card-title">유형</div>
-      <div style="display:flex;gap:8px;margin-bottom:16px;">
-        <button class="person-btn selected" id="patrolTypeBtn" onclick="setPatrolType('patrol')">순찰</button>
-        <button class="person-btn" id="cctvTypeBtn" onclick="setPatrolType('cctv')">CCTV 점검</button>
+    <div class="card timer-card">
+      <div class="type-toggle">
+        <button class="selected" id="patrolTypeBtn" onclick="setPatrolType('patrol')">순찰</button>
+        <button id="cctvTypeBtn" onclick="setPatrolType('cctv')">CCTV 점검</button>
       </div>
       <div class="timer-display" id="patrolTimer">00:00</div>
       <div class="timer-btns">
@@ -268,25 +338,27 @@ body {
     </div>
   </div>
 
-  <!-- Keys Page -->
   <div class="page" id="page-keys">
     <div class="card">
-      <div class="card-title">대상자</div>
+      <div class="card-title">대상자 선택</div>
       <div class="person-grid" id="keyPersons"></div>
-      <div class="card-title">열쇠</div>
+    </div>
+    <div class="card">
+      <div class="card-title">열쇠 선택</div>
       <div class="preset-grid" id="keyPresets"></div>
-      <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
-        <button class="action-btn" style="background:var(--orange);padding:14px 28px;font-size:16px;" onclick="addKey('issue')">불출</button>
-        <button class="action-btn" style="background:var(--blue);padding:14px 28px;font-size:16px;" onclick="addKey('return')">반납</button>
+      <div class="key-actions">
+        <button style="background:#f9ab00;" onclick="addKey('issue')">불출</button>
+        <button style="background:#4285f4;" onclick="addKey('return')">반납</button>
       </div>
     </div>
   </div>
 
-  <!-- Overtime Page -->
   <div class="page" id="page-overtime">
     <div class="card">
-      <div class="card-title">대상자</div>
+      <div class="card-title">대상자 선택</div>
       <div class="person-grid" id="otPersons"></div>
+    </div>
+    <div class="card timer-card">
       <div class="timer-display" id="otTimer">00:00</div>
       <div class="timer-btns">
         <button class="btn-start" id="otStart" onclick="startOT()">시작</button>
@@ -296,26 +368,47 @@ body {
     </div>
   </div>
 
-  <!-- Settings Page -->
   <div class="page" id="page-settings">
     <div class="card">
       <div class="card-title">인원 관리</div>
       <div id="personnelList"></div>
-      <div style="display:flex;gap:8px;margin-top:12px;">
-        <input id="newPersonName" class="note-input" style="margin:0;flex:1" placeholder="이름">
-        <button style="background:var(--green);color:#fff;border:none;padding:10px 16px;border-radius:8px;cursor:pointer;" onclick="addPerson()">추가</button>
+      <div class="add-row">
+        <input id="newPersonName" placeholder="이름 입력">
+        <button onclick="addPerson()">추가</button>
       </div>
     </div>
     <div class="card" style="margin-top:12px;">
       <div class="card-title">열쇠 프리셋</div>
       <div id="keyPresetList"></div>
-      <div style="display:flex;gap:8px;margin-top:12px;">
-        <input id="newKeyPreset" class="note-input" style="margin:0;flex:1" placeholder="열쇠 이름">
-        <button style="background:var(--orange);color:#fff;border:none;padding:10px 16px;border-radius:8px;cursor:pointer;" onclick="addKeyPreset()">추가</button>
+      <div class="add-row">
+        <input id="newKeyPreset" placeholder="열쇠 이름">
+        <button style="background:#f9ab00;" onclick="addKeyPreset()">추가</button>
       </div>
     </div>
     <div class="card" style="margin-top:12px;">
-      <button style="background:var(--red);color:#fff;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;width:100%;" onclick="resetToken()">토큰 초기화</button>
+      <button style="background:#fff;color:#ea4335;border:1px solid #ea4335;padding:12px;border-radius:10px;cursor:pointer;width:100%;font-size:14px;font-weight:600;" onclick="resetToken()">토큰 초기화</button>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <div class="bottom-nav">
+    <div class="nav-item active" data-page="timeline">
+      <span class="material-icons-round">view_timeline</span>타임라인
+    </div>
+    <div class="nav-item" data-page="entry">
+      <span class="material-icons-round">door_front</span>출입
+    </div>
+    <div class="nav-item" data-page="patrol">
+      <span class="material-icons-round">security</span>순찰
+    </div>
+    <div class="nav-item" data-page="keys">
+      <span class="material-icons-round">key</span>열쇠
+    </div>
+    <div class="nav-item" data-page="overtime">
+      <span class="material-icons-round">more_time</span>초과근무
+    </div>
+    <div class="nav-item" data-page="settings">
+      <span class="material-icons-round">settings</span>설정
     </div>
   </div>
 </div>
@@ -323,519 +416,266 @@ body {
 <div class="toast" id="toast"></div>
 
 <script>
-// ── Config ──
-const OWNER = 'DDDO12';
-const REPO = 'duty-log';
-const BRANCH = 'main';
-const API = 'https://api.github.com';
+const OWNER='DDDO12',REPO='duty-log',BRANCH='main',API='https://api.github.com';
+let TOKEN='',today=new Date().toISOString().split('T')[0];
+let events=[],personnel=[],keyPresets=['탄약고','정문','후문','무기고'];
+let selectedPerson={entry:null,key:null,ot:null},selectedKey=null;
+let patrolType='patrol',patrolRunning=false,patrolStartTime=null,patrolInterval=null;
+let otRunning=false,otStartTime=null,otInterval=null,otPerson=null;
+let eventsSha=null;
 
-let TOKEN = '';
-let today = new Date().toISOString().split('T')[0];
-let events = [];
-let personnel = [];
-let keyPresets = ['탄약고', '정문', '후문', '무기고'];
-
-// State
-let selectedPerson = { entry: null, key: null, ot: null };
-let selectedKey = null;
-let patrolType = 'patrol';
-let patrolRunning = false;
-let patrolStartTime = null;
-let patrolInterval = null;
-let otRunning = false;
-let otStartTime = null;
-let otInterval = null;
-let otPerson = null;
-
-// ── Init ──
-function init() {
-  TOKEN = localStorage.getItem('gh_token') || '';
-  if (!TOKEN) {
-    document.getElementById('setup').style.display = 'block';
-    document.getElementById('app').style.display = 'none';
-    return;
-  }
-  document.getElementById('setup').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('todayDate').textContent = today;
-
-  // Tab handlers
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById('page-' + tab.dataset.page).classList.add('active');
+function init(){
+  TOKEN=localStorage.getItem('gh_token')||'';
+  if(!TOKEN){document.getElementById('setup').style.display='flex';document.getElementById('app').style.display='none';return;}
+  document.getElementById('setup').style.display='none';
+  document.getElementById('app').style.display='block';
+  const wd=['일','월','화','수','목','금','토'][new Date().getDay()];
+  document.getElementById('todayDate').textContent=today+' ('+wd+')';
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    n.addEventListener('click',()=>{
+      document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      n.classList.add('active');
+      document.getElementById('page-'+n.dataset.page).classList.add('active');
     });
   });
-
-  loadPersonnel();
-  loadEvents();
-  restoreTimers();
+  loadPersonnel();loadEvents();restoreTimers();
 }
 
-function saveToken() {
-  const t = document.getElementById('tokenInput').value.trim();
-  if (!t) return;
-  TOKEN = t;
-  localStorage.setItem('gh_token', t);
-  init();
+function saveToken(){
+  const t=document.getElementById('tokenInput').value.trim();
+  if(!t)return;TOKEN=t;localStorage.setItem('gh_token',t);init();
 }
+function resetToken(){localStorage.removeItem('gh_token');location.reload();}
 
-function resetToken() {
-  localStorage.removeItem('gh_token');
-  location.reload();
-}
-
-// ── GitHub API ──
-async function ghGet(path) {
-  const r = await fetch(`${API}/repos/${OWNER}/${REPO}/contents/${path}?ref=${BRANCH}`, {
-    headers: { 'Authorization': `token ${TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }
+async function ghGet(path){
+  const r=await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path+'?ref='+BRANCH,{
+    headers:{'Authorization':'token '+TOKEN,'Accept':'application/vnd.github.v3+json'}
   });
-  if (r.status === 404) return null;
-  const data = await r.json();
-  return { content: JSON.parse(atob(data.content)), sha: data.sha };
+  if(r.status===404)return null;
+  const d=await r.json();
+  return{content:JSON.parse(atob(d.content)),sha:d.sha};
 }
-
-async function ghPut(path, content, sha, msg) {
-  const body = { message: msg, content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))), branch: BRANCH };
-  if (sha) body.sha = sha;
-  const r = await fetch(`${API}/repos/${OWNER}/${REPO}/contents/${path}`, {
-    method: 'PUT',
-    headers: { 'Authorization': `token ${TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+async function ghPut(path,content,sha,msg){
+  const body={message:msg,content:btoa(unescape(encodeURIComponent(JSON.stringify(content,null,2)))),branch:BRANCH};
+  if(sha)body.sha=sha;
+  const r=await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path,{
+    method:'PUT',headers:{'Authorization':'token '+TOKEN,'Content-Type':'application/json'},
+    body:JSON.stringify(body)
   });
   return r.ok;
 }
 
-// ── Load Data ──
-let eventsSha = null;
-
-async function loadEvents() {
-  try {
-    const result = await ghGet(`events/${today}.json`);
-    if (result) {
-      events = result.content.events || [];
-      eventsSha = result.sha;
-    } else {
-      events = [];
-      eventsSha = null;
-    }
-  } catch(e) {
-    events = [];
-  }
+async function loadEvents(){
+  try{const r=await ghGet('events/'+today+'.json');
+    if(r){events=r.content.events||[];eventsSha=r.sha;}
+    else{events=[];eventsSha=null;}
+  }catch(e){events=[];}
   renderTimeline();
 }
-
-async function loadPersonnel() {
-  try {
-    const result = await ghGet('personnel.json');
-    if (result) {
-      personnel = result.content.personnel || [];
-      // Load key presets if available
-      if (result.content.key_presets) keyPresets = result.content.key_presets;
-    }
-  } catch(e) {}
-  renderPersonButtons();
-  renderKeyPresets();
-  renderSettings();
+async function loadPersonnel(){
+  try{const r=await ghGet('personnel.json');
+    if(r){personnel=r.content.personnel||[];if(r.content.key_presets)keyPresets=r.content.key_presets;}
+  }catch(e){}
+  renderPersonButtons();renderKeyPresets();renderSettings();
 }
-
-async function saveEvents() {
-  const content = { date: today, events: events };
-  const msg = `update: ${today} events`;
-  const ok = await ghPut(`events/${today}.json`, content, eventsSha, msg);
-  if (ok) {
-    // Refresh sha
-    const r = await ghGet(`events/${today}.json`);
-    if (r) eventsSha = r.sha;
-  }
+async function saveEvents(){
+  const ok=await ghPut('events/'+today+'.json',{date:today,events:events},eventsSha,'update: '+today);
+  if(ok){const r=await ghGet('events/'+today+'.json');if(r)eventsSha=r.sha;}
   return ok;
 }
-
-async function savePersonnel() {
-  const result = await ghGet('personnel.json');
-  const content = { personnel, key_presets: keyPresets };
-  const ok = await ghPut('personnel.json', content, result ? result.sha : null, 'update personnel');
-  return ok;
+async function savePersonnel(){
+  const r=await ghGet('personnel.json');
+  return await ghPut('personnel.json',{personnel,key_presets:keyPresets},r?r.sha:null,'update personnel');
 }
 
-// ── Render ──
-function renderTimeline() {
-  const list = document.getElementById('timelineList');
-  const empty = document.getElementById('emptyMsg');
-  const stats = document.getElementById('statsRow');
-
-  if (!events.length) {
-    list.innerHTML = '';
-    empty.style.display = 'block';
-    stats.innerHTML = '';
-    return;
-  }
-  empty.style.display = 'none';
-
-  // Stats
-  const counts = {};
-  events.forEach(e => { counts[e.type] = (counts[e.type]||0) + 1; });
-  const labels = { entry:'출입', patrol:'순찰', cctv:'CCTV', key:'열쇠', overtime:'초과근무' };
-  stats.innerHTML = Object.entries(counts).map(([k,v]) =>
-    `<span class="stat-badge">${labels[k]||k} ${v}</span>`
-  ).join('');
-
-  // Sort by time
-  const sorted = [...events].sort((a,b) => a.time.localeCompare(b.time));
-  list.innerHTML = sorted.map((ev, i) => {
-    const origIdx = events.indexOf(ev);
-    const tagClass = 'tag-' + ev.type;
-    const tag = labels[ev.type] || ev.type;
-    let desc = '';
-    if (ev.type === 'entry') desc = `${ev.subject||''} ${ev.action||''}`;
-    else if (ev.type === 'patrol' || ev.type === 'cctv') desc = ev.action === 'start' ? '시작' : ev.action === 'stop' ? '종료' : '중단';
-    else if (ev.type === 'key') desc = `${ev.action==='issue'?'불출':'반납'} ${ev.subject||''} ${ev.location||''}`;
-    else if (ev.type === 'overtime') desc = `${ev.action==='start'?'시작':'종료'} ${ev.subject||''}`;
-    if (ev.note) desc += ` (${ev.note})`;
-
-    return `<div class="timeline-item">
-      <span class="timeline-time">${ev.time}</span>
-      <span class="timeline-tag ${tagClass}">${tag}</span>
-      <span class="timeline-desc">${desc}</span>
-      <span class="timeline-del" onclick="deleteEvent(${origIdx})">X</span>
-    </div>`;
+function renderTimeline(){
+  const list=document.getElementById('timelineList'),empty=document.getElementById('emptyMsg'),stats=document.getElementById('statsRow');
+  if(!events.length){list.innerHTML='';empty.style.display='block';stats.innerHTML='';return;}
+  empty.style.display='none';
+  const counts={};events.forEach(e=>{counts[e.type]=(counts[e.type]||0)+1;});
+  const lb={entry:'출입',patrol:'순찰',cctv:'CCTV',key:'열쇠',overtime:'초과근무'};
+  stats.innerHTML=Object.entries(counts).map(([k,v])=>'<span class="stat-badge">'+lb[k]+' '+v+'건</span>').join('');
+  const sorted=[...events].sort((a,b)=>a.time.localeCompare(b.time));
+  list.innerHTML=sorted.map(ev=>{
+    const oi=events.indexOf(ev),tc='tag-'+ev.type,tg=lb[ev.type]||ev.type;
+    let d='';
+    if(ev.type==='entry')d=(ev.subject||'')+' '+(ev.action||'');
+    else if(ev.type==='patrol'||ev.type==='cctv')d=ev.action==='start'?'시작':ev.action==='stop'?'종료':'중단';
+    else if(ev.type==='key')d=(ev.action==='issue'?'불출':'반납')+' '+(ev.subject||'')+' '+(ev.location||'');
+    else if(ev.type==='overtime')d=(ev.action==='start'?'시작':'종료')+' '+(ev.subject||'');
+    if(ev.note)d+=' ('+ev.note+')';
+    return '<div class="timeline-item"><span class="timeline-time">'+ev.time+'</span><span class="timeline-tag '+tc+'">'+tg+'</span><span class="timeline-desc">'+d+'</span><span class="timeline-del material-icons-round" onclick="deleteEvent('+oi+')">close</span></div>';
   }).join('');
 }
 
-function renderPersonButtons() {
-  ['entry','key','ot'].forEach(ctx => {
-    const el = document.getElementById(ctx === 'ot' ? 'otPersons' : ctx + 'Persons');
-    if (!el) return;
-    el.innerHTML = personnel.map(p =>
-      `<div class="person-btn" onclick="selectPerson('${ctx}','${p.name}')" id="p-${ctx}-${p.name}">${p.name}</div>`
-    ).join('');
+function renderPersonButtons(){
+  ['entry','key','ot'].forEach(ctx=>{
+    const el=document.getElementById(ctx==='ot'?'otPersons':ctx+'Persons');
+    if(!el)return;
+    el.innerHTML=personnel.map(p=>'<div class="person-btn" onclick="selectPerson(\''+ctx+'\',\''+p.name+'\')" id="p-'+ctx+'-'+p.name+'">'+p.name+'</div>').join('');
+  });
+}
+function renderKeyPresets(){
+  const el=document.getElementById('keyPresets');
+  if(!el)return;
+  el.innerHTML=keyPresets.map(k=>'<div class="preset-btn" onclick="selectKey(\''+k+'\')" id="kp-'+k+'">'+k+'</div>').join('');
+}
+function renderSettings(){
+  document.getElementById('personnelList').innerHTML=personnel.map((p,i)=>'<div class="setting-item"><span>'+p.name+(p.rank?' ('+p.rank+')':'')+'</span><span class="setting-del" onclick="removePerson('+i+')">삭제</span></div>').join('');
+  document.getElementById('keyPresetList').innerHTML=keyPresets.map((k,i)=>'<div class="setting-item"><span>'+k+'</span><span class="setting-del" onclick="removeKeyPreset('+i+')">삭제</span></div>').join('');
+}
+
+function selectPerson(ctx,name){
+  selectedPerson[ctx]=selectedPerson[ctx]===name?null:name;
+  document.querySelectorAll('#'+(ctx==='ot'?'otPersons':ctx+'Persons')+' .person-btn').forEach(b=>{
+    b.classList.toggle('selected',b.textContent===selectedPerson[ctx]);
+  });
+}
+function selectKey(name){
+  selectedKey=selectedKey===name?null:name;
+  document.querySelectorAll('#keyPresets .preset-btn').forEach(b=>{
+    b.classList.toggle('selected',b.textContent===selectedKey);
   });
 }
 
-function renderKeyPresets() {
-  const el = document.getElementById('keyPresets');
-  if (!el) return;
-  el.innerHTML = keyPresets.map(k =>
-    `<div class="preset-btn" onclick="selectKey('${k}')" id="kp-${k}">${k}</div>`
-  ).join('');
+function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+
+async function addEntry(action){
+  if(!selectedPerson.entry){toast('대상자를 선택하세요');return;}
+  events.push({time:nowTime(),type:'entry',action,subject:selectedPerson.entry,note:document.getElementById('entryNote').value.trim()});
+  document.getElementById('entryNote').value='';
+  if(await saveEvents()){toast(selectedPerson.entry+' '+action+' 기록');renderTimeline();}
+  else{events.pop();toast('저장 실패');}
+}
+async function addKey(action){
+  if(!selectedPerson.key){toast('대상자를 선택하세요');return;}
+  events.push({time:nowTime(),type:'key',action,subject:selectedPerson.key,location:selectedKey||'',note:''});
+  if(await saveEvents()){toast('열쇠 '+(action==='issue'?'불출':'반납')+' - '+selectedPerson.key);renderTimeline();}
+  else{events.pop();toast('저장 실패');}
 }
 
-function renderSettings() {
-  const pList = document.getElementById('personnelList');
-  pList.innerHTML = personnel.map((p,i) =>
-    `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #222;">
-      <span>${p.name} ${p.rank?'('+p.rank+')':''}</span>
-      <span style="color:var(--red);cursor:pointer;" onclick="removePerson(${i})">삭제</span>
-    </div>`
-  ).join('');
-
-  const kList = document.getElementById('keyPresetList');
-  kList.innerHTML = keyPresets.map((k,i) =>
-    `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #222;">
-      <span>${k}</span>
-      <span style="color:var(--red);cursor:pointer;" onclick="removeKeyPreset(${i})">삭제</span>
-    </div>`
-  ).join('');
+function setPatrolType(type){
+  patrolType=type;
+  document.getElementById('patrolTypeBtn').classList.toggle('selected',type==='patrol');
+  document.getElementById('cctvTypeBtn').classList.toggle('selected',type==='cctv');
 }
-
-// ── Selection ──
-function selectPerson(ctx, name) {
-  selectedPerson[ctx] = selectedPerson[ctx] === name ? null : name;
-  document.querySelectorAll(`#${ctx==='ot'?'otPersons':ctx+'Persons'} .person-btn`).forEach(b => {
-    b.classList.toggle('selected', b.textContent === selectedPerson[ctx]);
-  });
+async function startPatrol(){
+  events.push({time:nowTime(),type:patrolType,action:'start',note:document.getElementById('patrolNote').value.trim()});
+  if(await saveEvents()){
+    patrolRunning=true;patrolStartTime=Date.now();
+    localStorage.setItem('patrol_start',patrolStartTime);
+    localStorage.setItem('patrol_type',patrolType);
+    updatePatrolUI();startPatrolTimer();
+    toast((patrolType==='patrol'?'순찰':'CCTV 점검')+' 시작');renderTimeline();
+  }else{events.pop();toast('저장 실패');}
 }
-
-function selectKey(name) {
-  selectedKey = selectedKey === name ? null : name;
-  document.querySelectorAll('#keyPresets .preset-btn').forEach(b => {
-    b.classList.toggle('selected', b.textContent === selectedKey);
-  });
-}
-
-// ── Now time ──
-function nowTime() {
-  const d = new Date();
-  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
-}
-
-// ── Add Events ──
-async function addEntry(action) {
-  if (!selectedPerson.entry) { toast('대상자를 선택하세요'); return; }
-  const ev = {
-    time: nowTime(), type: 'entry', action,
-    subject: selectedPerson.entry,
-    note: document.getElementById('entryNote').value.trim()
-  };
-  events.push(ev);
-  document.getElementById('entryNote').value = '';
-  if (await saveEvents()) {
-    toast(`${selectedPerson.entry} ${action} 기록`);
-    renderTimeline();
-  } else {
-    events.pop();
-    toast('저장 실패');
-  }
-}
-
-async function addKey(action) {
-  if (!selectedPerson.key) { toast('대상자를 선택하세요'); return; }
-  const ev = {
-    time: nowTime(), type: 'key', action,
-    subject: selectedPerson.key,
-    location: selectedKey || '',
-    note: ''
-  };
-  events.push(ev);
-  if (await saveEvents()) {
-    toast(`열쇠 ${action==='issue'?'불출':'반납'} - ${selectedPerson.key}`);
-    renderTimeline();
-  } else {
-    events.pop();
-    toast('저장 실패');
-  }
-}
-
-// ── Patrol / CCTV ──
-function setPatrolType(type) {
-  patrolType = type;
-  document.getElementById('patrolTypeBtn').classList.toggle('selected', type==='patrol');
-  document.getElementById('cctvTypeBtn').classList.toggle('selected', type==='cctv');
-}
-
-async function startPatrol() {
-  const ev = { time: nowTime(), type: patrolType, action: 'start', note: document.getElementById('patrolNote').value.trim() };
-  events.push(ev);
-  if (await saveEvents()) {
-    patrolRunning = true;
-    patrolStartTime = Date.now();
-    localStorage.setItem('patrol_start', patrolStartTime);
-    localStorage.setItem('patrol_type', patrolType);
+async function stopPatrol(){
+  events.push({time:nowTime(),type:patrolType,action:'stop',note:document.getElementById('patrolNote').value.trim()});
+  if(await saveEvents()){
+    patrolRunning=false;clearInterval(patrolInterval);
+    localStorage.removeItem('patrol_start');localStorage.removeItem('patrol_type');
     updatePatrolUI();
-    startPatrolTimer();
-    toast(`${patrolType==='patrol'?'순찰':'CCTV 점검'} 시작`);
-    renderTimeline();
-  } else {
-    events.pop();
-    toast('저장 실패');
-  }
-}
-
-async function stopPatrol() {
-  const ev = { time: nowTime(), type: patrolType, action: 'stop', note: document.getElementById('patrolNote').value.trim() };
-  events.push(ev);
-  if (await saveEvents()) {
-    patrolRunning = false;
-    clearInterval(patrolInterval);
-    localStorage.removeItem('patrol_start');
-    localStorage.removeItem('patrol_type');
-    updatePatrolUI();
-    document.getElementById('patrolTimer').textContent = '00:00';
+    document.getElementById('patrolTimer').textContent='00:00';
     document.getElementById('patrolTimer').classList.remove('running');
-    document.getElementById('patrolNote').value = '';
-    toast(`${patrolType==='patrol'?'순찰':'CCTV 점검'} 종료`);
-    renderTimeline();
-  } else {
-    events.pop();
-    toast('저장 실패');
-  }
+    document.getElementById('patrolNote').value='';
+    toast((patrolType==='patrol'?'순찰':'CCTV 점검')+' 종료');renderTimeline();
+  }else{events.pop();toast('저장 실패');}
 }
-
-async function abortPatrol() {
-  const ev = { time: nowTime(), type: patrolType, action: 'abort', note: '중단' };
-  events.push(ev);
-  await saveEvents();
-  patrolRunning = false;
-  clearInterval(patrolInterval);
-  localStorage.removeItem('patrol_start');
-  localStorage.removeItem('patrol_type');
-  updatePatrolUI();
-  document.getElementById('patrolTimer').textContent = '00:00';
+async function abortPatrol(){
+  events.push({time:nowTime(),type:patrolType,action:'abort',note:'중단'});
+  await saveEvents();patrolRunning=false;clearInterval(patrolInterval);
+  localStorage.removeItem('patrol_start');localStorage.removeItem('patrol_type');
+  updatePatrolUI();document.getElementById('patrolTimer').textContent='00:00';
   document.getElementById('patrolTimer').classList.remove('running');
-  toast('중단');
-  renderTimeline();
+  toast('중단');renderTimeline();
+}
+function updatePatrolUI(){
+  document.getElementById('patrolStart').style.display=patrolRunning?'none':'';
+  document.getElementById('patrolStop').style.display=patrolRunning?'':'none';
+  document.getElementById('patrolAbort').style.display=patrolRunning?'':'none';
+}
+function startPatrolTimer(){
+  document.getElementById('patrolTimer').classList.add('running');
+  patrolInterval=setInterval(()=>{
+    const e=Math.floor((Date.now()-patrolStartTime)/1000),m=Math.floor(e/60),s=e%60;
+    document.getElementById('patrolTimer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  },1000);
 }
 
-function updatePatrolUI() {
-  document.getElementById('patrolStart').style.display = patrolRunning ? 'none' : '';
-  document.getElementById('patrolStop').style.display = patrolRunning ? '' : 'none';
-  document.getElementById('patrolAbort').style.display = patrolRunning ? '' : 'none';
+async function startOT(){
+  if(!selectedPerson.ot){toast('대상자를 선택하세요');return;}
+  events.push({time:nowTime(),type:'overtime',action:'start',subject:selectedPerson.ot,note:document.getElementById('otNote').value.trim()});
+  if(await saveEvents()){
+    otRunning=true;otStartTime=Date.now();otPerson=selectedPerson.ot;
+    localStorage.setItem('ot_start',otStartTime);localStorage.setItem('ot_person',otPerson);
+    updateOTUI();startOTTimer();toast('초과근무 시작 - '+otPerson);renderTimeline();
+  }else{events.pop();toast('저장 실패');}
 }
-
-function startPatrolTimer() {
-  const timerEl = document.getElementById('patrolTimer');
-  timerEl.classList.add('running');
-  patrolInterval = setInterval(() => {
-    const elapsed = Math.floor((Date.now() - patrolStartTime) / 1000);
-    const m = Math.floor(elapsed / 60);
-    const s = elapsed % 60;
-    timerEl.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-  }, 1000);
-}
-
-// ── Overtime ──
-async function startOT() {
-  if (!selectedPerson.ot) { toast('대상자를 선택하세요'); return; }
-  const ev = {
-    time: nowTime(), type: 'overtime', action: 'start',
-    subject: selectedPerson.ot,
-    note: document.getElementById('otNote').value.trim()
-  };
-  events.push(ev);
-  if (await saveEvents()) {
-    otRunning = true;
-    otStartTime = Date.now();
-    otPerson = selectedPerson.ot;
-    localStorage.setItem('ot_start', otStartTime);
-    localStorage.setItem('ot_person', otPerson);
-    updateOTUI();
-    startOTTimer();
-    toast(`초과근무 시작 - ${otPerson}`);
-    renderTimeline();
-  } else {
-    events.pop();
-    toast('저장 실패');
-  }
-}
-
-async function stopOT() {
-  const ev = {
-    time: nowTime(), type: 'overtime', action: 'stop',
-    subject: otPerson || selectedPerson.ot || '',
-    note: document.getElementById('otNote').value.trim()
-  };
-  events.push(ev);
-  if (await saveEvents()) {
-    otRunning = false;
-    clearInterval(otInterval);
-    localStorage.removeItem('ot_start');
-    localStorage.removeItem('ot_person');
-    updateOTUI();
-    document.getElementById('otTimer').textContent = '00:00';
+async function stopOT(){
+  events.push({time:nowTime(),type:'overtime',action:'stop',subject:otPerson||selectedPerson.ot||'',note:document.getElementById('otNote').value.trim()});
+  if(await saveEvents()){
+    otRunning=false;clearInterval(otInterval);
+    localStorage.removeItem('ot_start');localStorage.removeItem('ot_person');
+    updateOTUI();document.getElementById('otTimer').textContent='00:00';
     document.getElementById('otTimer').classList.remove('running');
-    document.getElementById('otNote').value = '';
-    toast('초과근무 종료');
-    renderTimeline();
-  } else {
-    events.pop();
-    toast('저장 실패');
-  }
+    document.getElementById('otNote').value='';toast('초과근무 종료');renderTimeline();
+  }else{events.pop();toast('저장 실패');}
+}
+function updateOTUI(){
+  document.getElementById('otStart').style.display=otRunning?'none':'';
+  document.getElementById('otStop').style.display=otRunning?'':'none';
+}
+function startOTTimer(){
+  document.getElementById('otTimer').classList.add('running');
+  otInterval=setInterval(()=>{
+    const e=Math.floor((Date.now()-otStartTime)/1000),m=Math.floor(e/60),s=e%60;
+    document.getElementById('otTimer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  },1000);
+}
+function restoreTimers(){
+  const ps=localStorage.getItem('patrol_start');
+  if(ps){patrolStartTime=parseInt(ps);patrolType=localStorage.getItem('patrol_type')||'patrol';setPatrolType(patrolType);patrolRunning=true;updatePatrolUI();startPatrolTimer();}
+  const os=localStorage.getItem('ot_start');
+  if(os){otStartTime=parseInt(os);otPerson=localStorage.getItem('ot_person')||'';otRunning=true;updateOTUI();startOTTimer();}
 }
 
-function updateOTUI() {
-  document.getElementById('otStart').style.display = otRunning ? 'none' : '';
-  document.getElementById('otStop').style.display = otRunning ? '' : 'none';
+async function deleteEvent(idx){
+  if(!confirm('삭제할까요?'))return;
+  events.splice(idx,1);
+  if(await saveEvents()){toast('삭제 완료');renderTimeline();}
+  else{toast('삭제 실패');loadEvents();}
 }
 
-function startOTTimer() {
-  const timerEl = document.getElementById('otTimer');
-  timerEl.classList.add('running');
-  otInterval = setInterval(() => {
-    const elapsed = Math.floor((Date.now() - otStartTime) / 1000);
-    const m = Math.floor(elapsed / 60);
-    const s = elapsed % 60;
-    timerEl.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-  }, 1000);
+async function addPerson(){
+  const name=document.getElementById('newPersonName').value.trim();
+  if(!name)return;personnel.push({name,rank:''});
+  document.getElementById('newPersonName').value='';
+  if(await savePersonnel()){toast(name+' 추가');renderPersonButtons();renderSettings();}
+}
+async function removePerson(idx){
+  const name=personnel[idx].name;personnel.splice(idx,1);
+  if(await savePersonnel()){toast(name+' 삭제');renderPersonButtons();renderSettings();}
+}
+async function addKeyPreset(){
+  const name=document.getElementById('newKeyPreset').value.trim();
+  if(!name)return;keyPresets.push(name);
+  document.getElementById('newKeyPreset').value='';
+  if(await savePersonnel()){toast(name+' 추가');renderKeyPresets();renderSettings();}
+}
+async function removeKeyPreset(idx){
+  keyPresets.splice(idx,1);
+  if(await savePersonnel()){renderKeyPresets();renderSettings();}
 }
 
-// ── Restore timers on reload ──
-function restoreTimers() {
-  const ps = localStorage.getItem('patrol_start');
-  if (ps) {
-    patrolStartTime = parseInt(ps);
-    patrolType = localStorage.getItem('patrol_type') || 'patrol';
-    setPatrolType(patrolType);
-    patrolRunning = true;
-    updatePatrolUI();
-    startPatrolTimer();
-  }
-  const os = localStorage.getItem('ot_start');
-  if (os) {
-    otStartTime = parseInt(os);
-    otPerson = localStorage.getItem('ot_person') || '';
-    otRunning = true;
-    updateOTUI();
-    startOTTimer();
-  }
+function syncToMaru(){toast('텔레그램에서 "동기화" 입력해주세요');}
+
+function toast(msg){
+  const el=document.getElementById('toast');el.textContent=msg;
+  el.classList.remove('show');void el.offsetWidth;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2000);
 }
 
-// ── Delete Event ──
-async function deleteEvent(idx) {
-  if (!confirm('삭제할까요?')) return;
-  events.splice(idx, 1);
-  if (await saveEvents()) {
-    toast('삭제 완료');
-    renderTimeline();
-  } else {
-    toast('삭제 실패');
-    loadEvents(); // reload
-  }
-}
-
-// ── Settings ──
-async function addPerson() {
-  const name = document.getElementById('newPersonName').value.trim();
-  if (!name) return;
-  personnel.push({ name, rank: '' });
-  document.getElementById('newPersonName').value = '';
-  if (await savePersonnel()) {
-    toast(`${name} 추가`);
-    renderPersonButtons();
-    renderSettings();
-  }
-}
-
-async function removePerson(idx) {
-  const name = personnel[idx].name;
-  personnel.splice(idx, 1);
-  if (await savePersonnel()) {
-    toast(`${name} 삭제`);
-    renderPersonButtons();
-    renderSettings();
-  }
-}
-
-async function addKeyPreset() {
-  const name = document.getElementById('newKeyPreset').value.trim();
-  if (!name) return;
-  keyPresets.push(name);
-  document.getElementById('newKeyPreset').value = '';
-  if (await savePersonnel()) {
-    toast(`${name} 추가`);
-    renderKeyPresets();
-    renderSettings();
-  }
-}
-
-async function removeKeyPreset(idx) {
-  keyPresets.splice(idx, 1);
-  if (await savePersonnel()) {
-    renderKeyPresets();
-    renderSettings();
-  }
-}
-
-// ── Sync to Maru ──
-async function syncToMaru() {
-  toast('마루에게 동기화 요청 중...');
-  // This would call maru's API if accessible
-  // For now just show instruction
-  setTimeout(() => toast('텔레그램에서 "동기화" 입력해주세요'), 500);
-}
-
-// ── Toast ──
-function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.remove('show');
-  void el.offsetWidth; // reflow
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2000);
-}
-
-// ── Start ──
 init();
 </script>
 </body>
