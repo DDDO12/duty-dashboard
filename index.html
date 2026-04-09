@@ -246,8 +246,16 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
         <span class="material-icons-round" id="keyToggleIcon" style="color:#f9ab00;font-size:20px;">expand_more</span>
       </div>
       <div id="keyAddBody" style="display:none;margin-top:12px;">
-        <div class="card-title">대상자 선택</div>
-        <div class="person-grid" id="keyPersons"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <div class="card-title">대상자 1</div>
+            <div class="person-grid" id="keyPersons1"></div>
+          </div>
+          <div>
+            <div class="card-title">대상자 2</div>
+            <div class="person-grid" id="keyPersons2"></div>
+          </div>
+        </div>
         <div class="card-title">열쇠 선택</div>
         <div class="preset-grid" id="keyPresets"></div>
         <div class="key-actions">
@@ -324,10 +332,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
 <div class="toast" id="toast"></div>
 
 <script>
-let viewDate=new Date().toISOString().split('T')[0];
+function todayLocal(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+let viewDate=todayLocal();
 let events=[],personnel=[],keyPresets=['탄약고','정문','후문','무기고'];
 let entryTypes=['탄약고','무기고','BL탄약고','교탄탄약고','간이탄약고'];
-let selectedPerson={key:null},selectedKey=null;
+let selectedPerson={key1:null,key2:null},selectedKey=null;
 let selectedEntryType=null, selectedEntryAction='입장', selectedEntryPerson1=null, selectedEntryPerson2=null;
 const ENTRY_ACTIONS=['입장','퇴장','외출','복귀'];
 let selectedPatrolPersons=new Set(), selectedCctvPersons=new Set(), selectedOtPersons=new Set();
@@ -449,7 +458,7 @@ function renderTimeline(){
     let d='';
     if(ev.type==='entry'){const sub=(ev.subject||'')+(ev.subject2?' / '+ev.subject2:'');d=sub+' '+(ev.action||'')+' '+(ev.location||'');}
     else if(ev.type==='patrol'||ev.type==='cctv')d=ev.action==='start'?'시작':ev.action==='stop'?'종료':'중단';
-    else if(ev.type==='key')d=(ev.action==='issue'?'수령':'반납')+' '+(ev.subject||'')+' '+(ev.location||'');
+    else if(ev.type==='key'){const ks=(ev.subject||'')+(ev.subject2?' / '+ev.subject2:'');d=(ev.action==='issue'?'수령':'반납')+' '+ks+' '+(ev.location||'');}
     else if(ev.type==='overtime')d=(ev.action==='start'?'시작':'종료')+' '+(ev.subject||'');
     if(ev.note)d+=' ('+ev.note+')';
     if(ev.duration)d+=' ['+ev.duration+']';
@@ -639,8 +648,10 @@ function restoreAllTimers(){
 // ── 공통 함수 ──
 function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 function renderPersonButtons(){
-  const el=document.getElementById('keyPersons');if(!el)return;
-  el.innerHTML=personnel.map(p=>'<div class="person-btn" onclick="selectPerson(\'key\',\''+p.name+'\')" id="p-key-'+p.name+'">'+p.name+'</div>').join('');
+  const el1=document.getElementById('keyPersons1');const el2=document.getElementById('keyPersons2');
+  if(!el1||!el2)return;
+  el1.innerHTML=personnel.map(p=>'<div class="person-btn'+(selectedPerson.key1===p.name?' selected':'')+'" onclick="selectKeyPerson(1,\''+p.name+'\')">'+p.name+'</div>').join('');
+  el2.innerHTML=personnel.map(p=>'<div class="person-btn'+(selectedPerson.key2===p.name?' selected':'')+'" onclick="selectKeyPerson(2,\''+p.name+'\')">'+p.name+'</div>').join('');
 }
 function renderKeyPresets(){
   const el=document.getElementById('keyPresets');if(!el)return;
@@ -656,20 +667,30 @@ function selectPerson(ctx,name){
   selectedPerson[ctx]=selectedPerson[ctx]===name?null:name;
   document.querySelectorAll('#'+(ctx==='ot'?'otPersons':ctx+'Persons')+' .person-btn').forEach(b=>{b.classList.toggle('selected',b.textContent===selectedPerson[ctx]);});
 }
+function selectKeyPerson(slot,name){
+  if(slot===1){selectedPerson.key1=selectedPerson.key1===name?null:name;}
+  else{selectedPerson.key2=selectedPerson.key2===name?null:name;}
+  renderPersonButtons();
+}
 function selectKey(name){selectedKey=selectedKey===name?null:name;document.querySelectorAll('#keyPresets .preset-btn').forEach(b=>{b.classList.toggle('selected',b.textContent===selectedKey);});}
 
 // ── 열쇠 ──
 async function addKey(action){
-  if(!selectedPerson.key){toast('대상자를 선택하세요');return;}
-  events.push({time:nowTime(),type:'key',action,subject:selectedPerson.key,location:selectedKey||''});
-  if(await saveEvents()){toast('열쇠 '+(action==='issue'?'수령':'반납'));renderTimeline();renderKeyBoard();}else{events.pop();toast('저장 실패. 다시 시도해주세요.');}
+  if(!selectedPerson.key1){toast('대상자 1을 선택하세요');return;}
+  const subject=selectedPerson.key1;
+  const subject2=selectedPerson.key2||'';
+  events.push({time:nowTime(),type:'key',action,subject,subject2,location:selectedKey||''});
+  const label=subject+(subject2?' / '+subject2:'');
+  if(await saveEvents()){toast('열쇠 '+(action==='issue'?'수령':'반납')+' '+label);renderTimeline();renderKeyBoard();}
+  else{events.pop();toast('저장 실패. 다시 시도해주세요.');}
+  selectedPerson.key1=null;selectedPerson.key2=null;renderPersonButtons();
 }
 function renderKeyBoard(){
   const board=document.getElementById('keyBoard');if(!board)return;
   const keyEvents=events.filter(e=>e.type==='key');
   if(!keyEvents.length){board.innerHTML='<div class="empty-state"><span class="material-icons-round">key_off</span><p>기록이 없어요</p></div>';return;}
-  // 수령-반납 매칭: subject+location 기준
-  const issued=[], returned=new Set();
+  // 수령-반납 매칭: subject+subject2+location 기준
+  const issued=[];
   keyEvents.forEach((ev,i)=>{
     if(ev.action==='issue') issued.push({...ev,idx:i,matched:false});
   });
@@ -679,13 +700,13 @@ function renderKeyBoard(){
       if(match){match.matched=true;match.returnTime=ev.time;}
     }
   });
-  // 미반납 먼저, 반납 완료 나중
   const sorted=[...issued].sort((a,b)=>(a.matched?1:0)-(b.matched?1:0)||b.time.localeCompare(a.time));
   board.innerHTML=sorted.map(is=>{
+    const label=is.subject+(is.subject2?' / '+is.subject2:'');
     if(is.matched){
-      return '<div class="entry-row done"><span class="entry-type" style="background:#4285f4;">반납</span><span class="entry-persons">'+is.subject+'</span><span style="font-size:13px;color:#666;">'+is.location+'</span><span style="font-size:12px;color:#999;margin-left:auto;">'+is.time+' ~ '+is.returnTime+'</span><span class="entry-check material-icons-round">check_circle</span></div>';
+      return '<div class="entry-row done"><span class="entry-type" style="background:#4285f4;">반납</span><span class="entry-persons">'+label+'</span><span style="font-size:13px;color:#666;">'+is.location+'</span><span style="font-size:12px;color:#999;margin-left:auto;">'+is.time+' ~ '+is.returnTime+'</span><span class="entry-check material-icons-round">check_circle</span></div>';
     }
-    return '<div class="entry-row"><span class="entry-type" style="background:#f9ab00;">수령</span><span class="entry-persons">'+is.subject+'</span><span style="font-size:13px;color:#666;">'+is.location+'</span><span style="font-size:12px;color:#1a73e8;margin-left:auto;">'+is.time+'</span><button style="background:#4285f4;color:#fff;border:none;padding:6px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;margin-left:8px;" onclick="returnKey(\''+is.subject+'\',\''+is.location+'\')">반납</button></div>';
+    return '<div class="entry-row"><span class="entry-type" style="background:#f9ab00;">수령</span><span class="entry-persons">'+label+'</span><span style="font-size:13px;color:#666;">'+is.location+'</span><span style="font-size:12px;color:#1a73e8;margin-left:auto;">'+is.time+'</span><button style="background:#4285f4;color:#fff;border:none;padding:6px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;margin-left:8px;" onclick="returnKey(\''+is.subject+'\',\''+is.location+'\')">반납</button></div>';
   }).join('');
 }
 async function returnKey(subject,location){
