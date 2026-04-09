@@ -154,14 +154,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
 </head>
 <body>
 
-<!-- Setup -->
-<div id="setup" class="setup-page" style="display:none;">
-  <span class="material-icons-round icon">lock_open</span>
-  <h2>GitHub 연결</h2>
-  <p>duty-log 레포 접근용 토큰을 입력하세요</p>
-  <input id="tokenInput" type="password" placeholder="GitHub Personal Access Token">
-  <button class="submit-btn" onclick="saveToken()">연결하기</button>
-</div>
+<!-- Setup (미사용) -->
+<div id="setup" class="setup-page" style="display:none;"></div>
 
 <!-- Main -->
 <div id="app" style="display:none;">
@@ -320,29 +314,24 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
 <div class="toast" id="toast"></div>
 
 <script>
-const OWNER='DDDO12',REPO='duty-log',BRANCH='main',API='https://api.github.com';
-let TOKEN='',viewDate=new Date().toISOString().split('T')[0];
+let viewDate=new Date().toISOString().split('T')[0];
 let events=[],personnel=[],keyPresets=['탄약고','정문','후문','무기고'];
 let entryTypes=['탄약고','무기고','BL탄약고','교탄탄약고','간이탄약고'];
 let selectedPerson={key:null},selectedKey=null;
 let selectedEntryType=null, selectedEntryPersons=new Set();
 let selectedPatrolPersons=new Set(), selectedCctvPersons=new Set(), selectedOtPersons=new Set();
-let eventsSha=null;
 // 게시판 타이머 (entry/patrol/cctv/overtime 통합)
 let boardTimers={}; // id -> {interval, startTime, paused, elapsed, category, type, persons, done, note}
 let timerIdCounter=0;
-// 날짜별 데이터 존재 캐시
-let datesWithData=new Set();
+// 날짜별 데이터 존재 캐시 (localStorage 기반)
+let datesWithData=new Set(JSON.parse(localStorage.getItem('event_dates')||'[]'));
 
 // ── 초기화 ──
 function init(){
-  TOKEN=localStorage.getItem('gh_token')||'';
-  if(!TOKEN){document.getElementById('setup').style.display='flex';document.getElementById('app').style.display='none';return;}
   document.getElementById('setup').style.display='none';
   document.getElementById('app').style.display='block';
   setupNav();setupNavDrag();updateDateLabel();
-  loadPersonnel().then(()=>{loadEvents();restoreAllTimers();renderAllBoards();});
-  setInterval(()=>{saveEvents();},12*60*60*1000);
+  loadPersonnel();loadEvents();restoreAllTimers();renderAllBoards();
 }
 
 function setupNav(){
@@ -380,11 +369,6 @@ function setupNavDrag(){
   }catch(e){}
 }
 
-function saveToken(){
-  const t=document.getElementById('tokenInput').value.trim();
-  if(!t)return;TOKEN=t;localStorage.setItem('gh_token',t);init();
-}
-function resetToken(){localStorage.removeItem('gh_token');location.reload();}
 
 // ── 날짜 이동 ──
 function updateDateLabel(){
@@ -417,68 +401,27 @@ function selectDate(){
   closeCalendar();
 }
 
-// ── GitHub API ──
-function b64decode(b64){return new TextDecoder().decode(Uint8Array.from(atob(b64),c=>c.charCodeAt(0)));}
-function b64encode(str){const bytes=new TextEncoder().encode(str);let bin='';bytes.forEach(b=>{bin+=String.fromCharCode(b);});return btoa(bin);}
-async function ghGet(path){
-  try{
-    const r=await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path+'?ref='+BRANCH,{
-      headers:{'Authorization':'token '+TOKEN,'Accept':'application/vnd.github.v3+json'}});
-    if(r.status===404)return null;if(!r.ok)return null;
-    const d=await r.json();return{content:JSON.parse(b64decode(d.content)),sha:d.sha};
-  }catch(e){console.error('ghGet:',e);return null;}
-}
-async function ghPut(path,content,sha,msg){
-  try{
-    const body={message:msg,content:b64encode(JSON.stringify(content,null,2)),branch:BRANCH};
-    if(sha)body.sha=sha;
-    const r=await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path,{
-      method:'PUT',headers:{'Authorization':'token '+TOKEN,'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(!r.ok){if(r.status===409||r.status===422){console.log('SHA conflict, will retry');}return false;}
-    return true;
-  }catch(e){console.error('ghPut:',e);return false;}
-}
-
-async function loadEvents(){
-  const r=await ghGet('events/'+viewDate+'.json');
-  if(r){events=r.content.events||[];eventsSha=r.sha;datesWithData.add(viewDate);}
-  else{events=[];eventsSha=null;}
+// ── localStorage 저장/불러오기 ──
+function loadEvents(){
+  const data=localStorage.getItem('events_'+viewDate);
+  if(data){const d=JSON.parse(data);events=d.events||[];}
+  else{events=[];}
   renderTimeline();renderEntryBoard();renderKeyBoard();updateDateLabel();
 }
-async function loadPersonnel(){
-  const r=await ghGet('personnel.json');
-  if(r){
-    personnel=r.content.personnel||[];
-    if(r.content.key_presets)keyPresets=r.content.key_presets;
-    if(r.content.entry_types)entryTypes=r.content.entry_types;
-  }
+function loadPersonnel(){
+  const data=localStorage.getItem('personnel');
+  if(data){const d=JSON.parse(data);personnel=d.personnel||[];if(d.key_presets)keyPresets=d.key_presets;if(d.entry_types)entryTypes=d.entry_types;}
   renderPersonButtons();renderKeyPresets();renderSettings();renderEntryForm();
   renderPersonChips('patrol');renderPersonChips('cctv');renderPersonChips('ot');
 }
-let _saving=false;
-async function saveEvents(){
-  if(_saving){await new Promise(r=>setTimeout(r,500));return saveEvents();}
-  _saving=true;
-  try{
-    // 충돌 시 자동 재시도 (최대 2회)
-    for(let retry=0;retry<2;retry++){
-      const ok=await ghPut('events/'+viewDate+'.json',{date:viewDate,events},eventsSha,'update: '+viewDate);
-      if(ok){
-        datesWithData.add(viewDate);
-        const r=await ghGet('events/'+viewDate+'.json');
-        if(r)eventsSha=r.sha;
-        return true;
-      }
-      // SHA 충돌 -> 최신 SHA 가져와서 재시도
-      const fresh=await ghGet('events/'+viewDate+'.json');
-      if(fresh){eventsSha=fresh.sha;}else{eventsSha=null;}
-    }
-    return false;
-  }finally{_saving=false;}
+function saveEvents(){
+  localStorage.setItem('events_'+viewDate,JSON.stringify({date:viewDate,events}));
+  if(!datesWithData.has(viewDate)){datesWithData.add(viewDate);localStorage.setItem('event_dates',JSON.stringify([...datesWithData]));}
+  return Promise.resolve(true);
 }
-async function savePersonnel(){
-  const r=await ghGet('personnel.json');const sha=r?r.sha:null;
-  return await ghPut('personnel.json',{personnel,key_presets:keyPresets,entry_types:entryTypes},sha,'update personnel');
+function savePersonnel(){
+  localStorage.setItem('personnel',JSON.stringify({personnel,key_presets:keyPresets,entry_types:entryTypes}));
+  return Promise.resolve(true);
 }
 
 // ── 타임라인 렌더링 ──
@@ -740,12 +683,12 @@ async function returnKey(subject,location){
 
 // ── 삭제/추가 ──
 async function deleteEvent(idx){if(!confirm('삭제할까요?'))return;const bk=[...events];events.splice(idx,1);if(await saveEvents()){toast('삭제');renderTimeline();}else{events=bk;toast('저장 실패. 다시 시도해주세요.');renderTimeline();}}
-async function addPerson(){const n=document.getElementById('newPersonName').value.trim();if(!n)return;personnel.push({name:n});document.getElementById('newPersonName').value='';if(await savePersonnel()){toast(n+' 추가');renderPersonButtons();renderSettings();renderEntryForm();}else personnel.pop();}
-async function removePerson(i){if(!confirm(personnel[i].name+' 삭제?'))return;const bk=[...personnel];personnel.splice(i,1);if(await savePersonnel()){renderPersonButtons();renderSettings();renderEntryForm();}else personnel=bk;}
-async function addKeyPreset(){const n=document.getElementById('newKeyPreset').value.trim();if(!n)return;keyPresets.push(n);document.getElementById('newKeyPreset').value='';if(await savePersonnel()){renderKeyPresets();renderSettings();}else keyPresets.pop();}
-async function removeKeyPreset(i){const bk=[...keyPresets];keyPresets.splice(i,1);if(await savePersonnel()){renderKeyPresets();renderSettings();}else keyPresets=bk;}
-async function addEntryType(){const n=document.getElementById('newEntryType').value.trim();if(!n)return;entryTypes.push(n);document.getElementById('newEntryType').value='';if(await savePersonnel()){renderSettings();renderEntryForm();}else entryTypes.pop();}
-async function removeEntryType(i){const bk=[...entryTypes];entryTypes.splice(i,1);if(await savePersonnel()){renderSettings();renderEntryForm();}else entryTypes=bk;}
+async function addPerson(){const n=document.getElementById('newPersonName').value.trim();if(!n)return;personnel.push({name:n});document.getElementById('newPersonName').value='';if(await savePersonnel()){toast(n+' 추가');renderPersonButtons();renderSettings();renderEntryForm();}else{personnel.pop();document.getElementById('newPersonName').value=n;toast('저장 실패. 토큰을 확인해주세요.');}}
+async function removePerson(i){if(!confirm(personnel[i].name+' 삭제?'))return;const bk=[...personnel];personnel.splice(i,1);if(await savePersonnel()){renderPersonButtons();renderSettings();renderEntryForm();}else{personnel=bk;toast('저장 실패. 토큰을 확인해주세요.');renderSettings();}}
+async function addKeyPreset(){const n=document.getElementById('newKeyPreset').value.trim();if(!n)return;keyPresets.push(n);document.getElementById('newKeyPreset').value='';if(await savePersonnel()){renderKeyPresets();renderSettings();}else{keyPresets.pop();document.getElementById('newKeyPreset').value=n;toast('저장 실패. 토큰을 확인해주세요.');}}
+async function removeKeyPreset(i){const bk=[...keyPresets];keyPresets.splice(i,1);if(await savePersonnel()){renderKeyPresets();renderSettings();}else{keyPresets=bk;toast('저장 실패. 토큰을 확인해주세요.');renderSettings();}}
+async function addEntryType(){const n=document.getElementById('newEntryType').value.trim();if(!n)return;entryTypes.push(n);document.getElementById('newEntryType').value='';if(await savePersonnel()){renderSettings();renderEntryForm();}else{entryTypes.pop();document.getElementById('newEntryType').value=n;toast('저장 실패. 토큰을 확인해주세요.');}}
+async function removeEntryType(i){const bk=[...entryTypes];entryTypes.splice(i,1);if(await savePersonnel()){renderSettings();renderEntryForm();}else{entryTypes=bk;toast('저장 실패. 토큰을 확인해주세요.');renderSettings();}}
 
 // ── 토글 접기/펼치기 ──
 function toggleAddForm(ctx){
@@ -771,7 +714,19 @@ function editBoard(id){
   toast('수정 완료');
 }
 
-function syncToMaru(){toast('텔레그램에서 "동기화" 입력');}
+function syncToMaru(){
+  const json=JSON.stringify({date:viewDate,events},null,2);
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(json).then(()=>toast('복사 완료! 텔레그램에 붙여넣기 하세요')).catch(()=>fallbackCopy(json));
+  }else{fallbackCopy(json);}
+}
+function fallbackCopy(text){
+  const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');toast('복사 완료! 텔레그램에 붙여넣기 하세요');}
+  catch(e){toast('복사 실패. 직접 선택해주세요.');}
+  document.body.removeChild(ta);
+}
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2000);}
 
 init();
