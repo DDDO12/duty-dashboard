@@ -4,276 +4,157 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>실시사항</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body {
-  font-family: 'Noto Sans KR', sans-serif;
-  background: #f5f5f5; color: #222;
-  min-height: 100vh; padding-bottom: 72px;
-  -webkit-tap-highlight-color: transparent;
-}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-height:100vh;padding-bottom:72px;-webkit-tap-highlight-color:transparent;}
 
 /* Header */
-.header {
-  background: #fff; padding: 14px 20px;
-  display: flex; justify-content: space-between; align-items: center;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  position: sticky; top: 0; z-index: 10;
-}
-.header-left h1 { font-size: 20px; font-weight: 700; color: #1a73e8; }
-.header-left .date { font-size: 13px; color: #666; margin-top: 2px; }
-.sync-btn {
-  background: #1a73e8; border: none; color: #fff;
-  padding: 8px 16px; border-radius: 20px;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  display: flex; align-items: center; gap: 4px;
-}
-.sync-btn .material-icons-round { font-size: 16px; }
+.header{background:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,0.08);position:sticky;top:0;z-index:10;}
+.header-left h1{font-size:20px;font-weight:700;color:#1a73e8;}
+.header-left .date{font-size:13px;color:#666;margin-top:2px;}
+.sync-btn{background:#1a73e8;border:none;color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;}
+
+/* Date Nav */
+.date-nav{display:flex;align-items:center;justify-content:center;gap:12px;padding:12px;background:#fff;border-bottom:1px solid #eee;}
+.date-nav button{background:none;border:none;font-size:24px;color:#1a73e8;cursor:pointer;padding:4px 8px;border-radius:50%;}
+.date-nav button:active{background:#e8f0fe;}
+.date-nav .current-date{font-size:16px;font-weight:600;cursor:pointer;padding:6px 16px;border-radius:20px;}
+.date-nav .current-date:active{background:#e8f0fe;}
+.date-nav .current-date.has-data{color:#1a73e8;}
+.date-nav .current-date.has-data::after{content:'';display:inline-block;width:6px;height:6px;background:#34a853;border-radius:50%;margin-left:6px;vertical-align:middle;}
+
+/* Calendar Modal */
+.modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:50;display:none;align-items:center;justify-content:center;}
+.modal-bg.show{display:flex;}
+.calendar-modal{background:#fff;border-radius:16px;padding:20px;width:320px;max-width:90vw;}
+.calendar-modal input[type=date]{width:100%;padding:12px;font-size:16px;border:2px solid #e0e0e0;border-radius:10px;font-family:'Noto Sans KR';}
+.calendar-modal input:focus{outline:none;border-color:#1a73e8;}
+.calendar-modal .modal-btns{display:flex;gap:8px;margin-top:12px;}
+.calendar-modal .modal-btns button{flex:1;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;}
+.btn-cancel{background:#f0f0f0;color:#666;}
+.btn-confirm{background:#1a73e8;color:#fff;}
 
 /* Bottom Nav */
-.bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  background: #fff; display: flex;
-  box-shadow: 0 -1px 3px rgba(0,0,0,0.1);
-  z-index: 10;
-}
-.nav-item {
-  flex: 1; padding: 8px 0 6px; text-align: center;
-  cursor: pointer; color: #999; font-size: 11px;
-}
-.nav-item .material-icons-round { display: block; font-size: 22px; margin: 0 auto 2px; }
-.nav-item.active { color: #1a73e8; }
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;box-shadow:0 -1px 3px rgba(0,0,0,0.1);z-index:10;}
+.nav-item{flex:1;padding:6px 0 4px;text-align:center;cursor:pointer;color:#999;font-size:9px;white-space:nowrap;min-width:0;}
+.nav-item .material-icons-round{display:block;font-size:18px;margin:0 auto 1px;}
+.nav-item.active{color:#1a73e8;}
 
 /* Pages */
-.page { display: none; padding: 16px; }
-.page.active { display: block; }
+.page{display:none;padding:16px;}
+.page.active{display:block;}
 
 /* Cards */
-.card {
-  background: #fff; border-radius: 12px;
-  padding: 20px; margin-bottom: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-}
-.card-title {
-  font-size: 13px; color: #666; margin-bottom: 12px;
-  font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
-}
-
-/* Person Selector */
-.person-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-  margin-bottom: 16px;
-}
-.person-btn {
-  background: #f0f0f0; border: 2px solid transparent;
-  color: #444; padding: 12px 6px; border-radius: 10px;
-  font-size: 15px; font-weight: 500; cursor: pointer;
-  text-align: center; transition: all 0.15s;
-}
-.person-btn.selected {
-  border-color: #1a73e8; background: #e8f0fe;
-  color: #1a73e8; font-weight: 700;
-}
-
-/* Action Buttons */
-.action-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-  margin-bottom: 16px;
-}
-.action-btn {
-  padding: 14px 8px; border-radius: 10px; border: none;
-  font-size: 15px; font-weight: 700; cursor: pointer;
-  color: #fff; transition: opacity 0.15s;
-}
-.action-btn:active { opacity: 0.8; }
-.action-btn.entry { background: #34a853; }
-.action-btn.exit { background: #ea4335; }
-.action-btn.leave { background: #f9ab00; }
-.action-btn.return { background: #4285f4; }
-.action-btn.transfer { background: #9334e6; }
-
-/* Timer */
-.timer-card { text-align: center; }
-.timer-display {
-  font-size: 48px; font-weight: 700;
-  color: #888; padding: 24px 0;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 2px;
-}
-.timer-display.running { color: #34a853; }
-.timer-btns { display: flex; gap: 12px; justify-content: center; margin-top: 8px; }
-.timer-btns button {
-  padding: 14px 32px; border-radius: 24px; border: none;
-  font-size: 16px; font-weight: 700; cursor: pointer; color: #fff;
-  min-width: 110px; transition: opacity 0.15s;
-}
-.timer-btns button:active { opacity: 0.8; }
-.btn-start { background: #34a853; }
-.btn-stop { background: #ea4335; }
-.btn-abort { background: #999; }
-
-/* Type Toggle */
-.type-toggle {
-  display: flex; background: #f0f0f0; border-radius: 10px;
-  padding: 4px; margin-bottom: 20px;
-}
-.type-toggle button {
-  flex: 1; padding: 10px; border: none; border-radius: 8px;
-  font-size: 14px; font-weight: 600; cursor: pointer;
-  background: transparent; color: #666; transition: all 0.2s;
-}
-.type-toggle button.selected {
-  background: #fff; color: #1a73e8;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-/* Timeline */
-.timeline-item {
-  display: flex; align-items: center; padding: 14px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-.timeline-time {
-  font-size: 14px; color: #1a73e8; font-weight: 600;
-  min-width: 50px; font-variant-numeric: tabular-nums;
-}
-.timeline-tag {
-  font-size: 11px; padding: 3px 8px; border-radius: 12px;
-  margin: 0 10px; min-width: 44px; text-align: center;
-  font-weight: 700;
-}
-.tag-entry { background: #e6f4ea; color: #137333; }
-.tag-patrol { background: #e8f0fe; color: #1967d2; }
-.tag-cctv { background: #f3e8fd; color: #7627bb; }
-.tag-key { background: #fef7e0; color: #b06000; }
-.tag-overtime { background: #fce8e6; color: #c5221f; }
-.timeline-desc { font-size: 14px; flex: 1; color: #333; }
-.timeline-del {
-  color: #ccc; font-size: 18px; cursor: pointer;
-  padding: 4px 8px; border-radius: 50%;
-}
-.timeline-del:active { background: #f0f0f0; color: #ea4335; }
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+.card-title{font-size:13px;color:#666;margin-bottom:12px;font-weight:600;}
 
 /* Stats */
-.stats-row {
-  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
-}
-.stat-badge {
-  background: #e8f0fe; color: #1967d2; padding: 6px 14px;
-  border-radius: 20px; font-size: 13px; font-weight: 600;
-}
+.stats-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.stat-badge{background:#e8f0fe;color:#1967d2;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;}
+
+/* Timeline */
+.timeline-item{display:flex;align-items:center;padding:14px 0;border-bottom:1px solid #f0f0f0;}
+.timeline-time{font-size:14px;color:#1a73e8;font-weight:600;min-width:50px;}
+.timeline-tag{font-size:11px;padding:3px 8px;border-radius:12px;margin:0 10px;min-width:44px;text-align:center;font-weight:700;}
+.tag-entry{background:#e6f4ea;color:#137333;}
+.tag-patrol{background:#e8f0fe;color:#1967d2;}
+.tag-cctv{background:#f3e8fd;color:#7627bb;}
+.tag-key{background:#fef7e0;color:#b06000;}
+.tag-overtime{background:#fce8e6;color:#c5221f;}
+.timeline-desc{font-size:14px;flex:1;color:#333;}
+.timeline-del{color:#ccc;font-size:18px;cursor:pointer;padding:4px 8px;border-radius:50%;}
+.timeline-del:active{background:#f0f0f0;color:#ea4335;}
+
+/* ===== 출입 게시판형 ===== */
+.entry-board{margin-top:8px;}
+.entry-row{background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);display:flex;align-items:center;gap:10px;}
+.entry-row.done{opacity:0.6;}
+.entry-type{font-size:13px;font-weight:700;color:#fff;background:#1a73e8;padding:4px 10px;border-radius:8px;min-width:52px;text-align:center;}
+.entry-persons{font-size:14px;font-weight:500;flex:1;color:#333;}
+.entry-timer{font-size:16px;font-weight:700;min-width:56px;text-align:center;font-variant-numeric:tabular-nums;color:#666;}
+.entry-timer.running{color:#34a853;}
+.entry-actions{display:flex;gap:6px;}
+.entry-actions button{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.entry-actions button .material-icons-round{font-size:20px;color:#fff;}
+.btn-play{background:#34a853;}
+.btn-pause{background:#f9ab00;}
+.btn-stop-entry{background:#ea4335;}
+.entry-check{color:#34a853;font-size:28px;font-weight:700;min-width:36px;text-align:center;}
+
+/* 새 출입 추가 폼 */
+.entry-add-card{background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+.type-selector{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;padding-bottom:4px;}
+.type-selector::-webkit-scrollbar{display:none;}
+.type-chip{padding:8px 16px;border-radius:20px;border:2px solid #e0e0e0;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#444;white-space:nowrap;flex-shrink:0;scroll-snap-align:start;}
+.type-chip.selected{border-color:#1a73e8;background:#e8f0fe;color:#1a73e8;}
+.person-selector{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.person-chip{padding:8px 14px;border-radius:20px;border:2px solid #e0e0e0;font-size:13px;font-weight:500;cursor:pointer;background:#fff;color:#444;}
+.person-chip.selected{border-color:#34a853;background:#e6f4ea;color:#137333;}
+.entry-add-btn{background:#1a73e8;color:#fff;border:none;padding:12px 24px;border-radius:24px;font-size:14px;font-weight:700;cursor:pointer;width:100%;}
+.entry-add-btn:active{opacity:0.8;}
+
+/* Timer display in patrol/overtime */
+.timer-card{text-align:center;}
+.timer-display{font-size:48px;font-weight:700;color:#888;padding:24px 0;font-variant-numeric:tabular-nums;letter-spacing:2px;}
+.timer-display.running{color:#34a853;}
+.timer-btns{display:flex;gap:12px;justify-content:center;margin-top:8px;}
+.timer-btns button{padding:14px 32px;border-radius:24px;border:none;font-size:16px;font-weight:700;cursor:pointer;color:#fff;min-width:110px;}
+.btn-start{background:#34a853;}.btn-stop{background:#ea4335;}.btn-abort{background:#999;}
+
+/* Type Toggle (patrol) */
+.type-toggle{display:flex;background:#f0f0f0;border-radius:10px;padding:4px;margin-bottom:20px;}
+.type-toggle button{flex:1;padding:10px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:#666;}
+.type-toggle button.selected{background:#fff;color:#1a73e8;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+
+/* Preset grid (keys) */
+.preset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+.preset-btn{background:#f0f0f0;border:2px solid transparent;color:#444;padding:10px 4px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;text-align:center;}
+.preset-btn.selected{border-color:#f9ab00;background:#fef7e0;color:#b06000;}
+.person-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+.person-btn{background:#f0f0f0;border:2px solid transparent;color:#444;padding:12px 6px;border-radius:10px;font-size:15px;font-weight:500;cursor:pointer;text-align:center;}
+.person-btn.selected{border-color:#1a73e8;background:#e8f0fe;color:#1a73e8;font-weight:700;}
+.key-actions{display:flex;gap:12px;justify-content:center;margin-top:20px;}
+.key-actions button{padding:14px 32px;border-radius:24px;border:none;font-size:16px;font-weight:700;cursor:pointer;color:#fff;min-width:110px;}
 
 /* Note input */
-.note-input {
-  width: 100%; background: #f8f8f8; border: 1px solid #e0e0e0;
-  color: #333; padding: 12px; border-radius: 10px;
-  font-size: 14px; margin-top: 12px; resize: none;
-  font-family: 'Noto Sans KR', sans-serif;
-}
-.note-input:focus { outline: none; border-color: #1a73e8; background: #fff; }
+.note-input{width:100%;background:#f8f8f8;border:1px solid #e0e0e0;color:#333;padding:12px;border-radius:10px;font-size:14px;margin-top:12px;resize:none;font-family:'Noto Sans KR';}
+.note-input:focus{outline:none;border-color:#1a73e8;background:#fff;}
 
-/* Key presets */
-.preset-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-  margin-bottom: 16px;
-}
-.preset-btn {
-  background: #f0f0f0; border: 2px solid transparent;
-  color: #444; padding: 10px 4px; border-radius: 8px;
-  font-size: 13px; font-weight: 500; cursor: pointer;
-  text-align: center; transition: all 0.15s;
-}
-.preset-btn.selected {
-  border-color: #f9ab00; background: #fef7e0; color: #b06000;
-}
-
-/* Key action buttons */
-.key-actions {
-  display: flex; gap: 12px; justify-content: center; margin-top: 20px;
-}
-.key-actions button {
-  padding: 14px 32px; border-radius: 24px; border: none;
-  font-size: 16px; font-weight: 700; cursor: pointer; color: #fff;
-  min-width: 110px;
-}
-
-/* Toast */
-.toast {
-  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-  background: #333; color: #fff; padding: 12px 24px;
-  border-radius: 24px; font-size: 14px; font-weight: 500; z-index: 100;
-  display: none; max-width: 85%; text-align: center;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-.toast.show { display: block; animation: fadeInOut 2s; }
-@keyframes fadeInOut {
-  0%{opacity:0;transform:translateX(-50%) translateY(10px)}
-  10%{opacity:1;transform:translateX(-50%) translateY(0)}
-  80%{opacity:1} 100%{opacity:0}
-}
+/* Settings */
+.setting-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f0f0f0;}
+.setting-item span{font-size:15px;}
+.setting-del{color:#ea4335;font-size:13px;font-weight:600;cursor:pointer;padding:4px 12px;border-radius:16px;}
+.setting-del:active{background:#fce8e6;}
+.add-row{display:flex;gap:8px;margin-top:12px;}
+.add-row input{flex:1;padding:10px 14px;border:1px solid #e0e0e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';}
+.add-row input:focus{outline:none;border-color:#1a73e8;background:#fff;}
+.add-row button{background:#34a853;color:#fff;border:none;padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;}
 
 /* Setup */
-.setup-page {
-  padding: 60px 24px; text-align: center;
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; min-height: 80vh;
-}
-.setup-page .icon { font-size: 64px; color: #1a73e8; margin-bottom: 16px; }
-.setup-page h2 { font-size: 22px; margin-bottom: 8px; }
-.setup-page p { color: #666; font-size: 14px; margin-bottom: 24px; }
-.setup-page input {
-  width: 100%; max-width: 320px; padding: 14px 16px;
-  background: #fff; border: 2px solid #e0e0e0;
-  color: #333; border-radius: 12px; font-size: 15px;
-  font-family: 'Noto Sans KR', sans-serif;
-}
-.setup-page input:focus { outline: none; border-color: #1a73e8; }
-.setup-page .submit-btn {
-  background: #1a73e8; color: #fff; border: none;
-  padding: 14px 48px; border-radius: 24px; font-size: 16px;
-  font-weight: 700; cursor: pointer; margin-top: 16px;
-}
+.setup-page{padding:60px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;}
+.setup-page .icon{font-size:64px;color:#1a73e8;margin-bottom:16px;}
+.setup-page h2{font-size:22px;margin-bottom:8px;}
+.setup-page p{color:#666;font-size:14px;margin-bottom:24px;}
+.setup-page input{width:100%;max-width:320px;padding:14px 16px;background:#fff;border:2px solid #e0e0e0;color:#333;border-radius:12px;font-size:15px;font-family:'Noto Sans KR';}
+.setup-page input:focus{outline:none;border-color:#1a73e8;}
+.setup-page .submit-btn{background:#1a73e8;color:#fff;border:none;padding:14px 48px;border-radius:24px;font-size:16px;font-weight:700;cursor:pointer;margin-top:16px;}
 
-/* Settings list */
-.setting-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 0; border-bottom: 1px solid #f0f0f0;
-}
-.setting-item span { font-size: 15px; }
-.setting-del {
-  color: #ea4335; font-size: 13px; font-weight: 600;
-  cursor: pointer; padding: 4px 12px; border-radius: 16px;
-}
-.setting-del:active { background: #fce8e6; }
-.add-row {
-  display: flex; gap: 8px; margin-top: 12px;
-}
-.add-row input {
-  flex: 1; padding: 10px 14px; border: 1px solid #e0e0e0;
-  border-radius: 10px; font-size: 14px; background: #f8f8f8;
-  font-family: 'Noto Sans KR', sans-serif;
-}
-.add-row input:focus { outline: none; border-color: #1a73e8; background: #fff; }
-.add-row button {
-  background: #34a853; color: #fff; border: none;
-  padding: 10px 18px; border-radius: 10px; font-size: 14px;
-  font-weight: 600; cursor: pointer; white-space: nowrap;
-}
+/* Empty */
+.empty-state{text-align:center;padding:48px 20px;color:#999;}
+.empty-state .material-icons-round{font-size:48px;margin-bottom:12px;color:#ddd;}
 
-/* Empty state */
-.empty-state {
-  text-align: center; padding: 48px 20px; color: #999;
-}
-.empty-state .material-icons-round { font-size: 48px; margin-bottom: 12px; color: #ddd; }
-.empty-state p { font-size: 15px; }
+/* Toast */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 24px;border-radius:24px;font-size:14px;font-weight:500;z-index:100;display:none;max-width:85%;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.2);}
+.toast.show{display:block;animation:fadeInOut 2s;}
+@keyframes fadeInOut{0%{opacity:0;transform:translateX(-50%) translateY(10px)}10%{opacity:1;transform:translateX(-50%) translateY(0)}80%{opacity:1}100%{opacity:0}}
 </style>
 </head>
 <body>
 
-<!-- Setup Screen -->
+<!-- Setup -->
 <div id="setup" class="setup-page" style="display:none;">
   <span class="material-icons-round icon">lock_open</span>
   <h2>GitHub 연결</h2>
@@ -282,133 +163,156 @@ body {
   <button class="submit-btn" onclick="saveToken()">연결하기</button>
 </div>
 
-<!-- Main App -->
+<!-- Main -->
 <div id="app" style="display:none;">
   <div class="header">
     <div class="header-left">
       <h1>실시사항</h1>
       <div class="date" id="todayDate"></div>
     </div>
-    <button class="sync-btn" onclick="syncToMaru()">
-      <span class="material-icons-round">sync</span> 동기화
-    </button>
+    <button class="sync-btn" onclick="syncToMaru()"><span class="material-icons-round">sync</span> 동기화</button>
   </div>
 
   <!-- Pages -->
   <div class="page active" id="page-timeline">
+    <!-- Date Nav (타임라인 전용) -->
+    <div class="date-nav">
+      <button onclick="prevDay()"><span class="material-icons-round">chevron_left</span></button>
+      <span class="current-date" id="dateLabel" onclick="openCalendar()"></span>
+      <button onclick="nextDay()"><span class="material-icons-round">chevron_right</span></button>
+    </div>
     <div class="stats-row" id="statsRow"></div>
     <div id="timelineList"></div>
-    <div class="empty-state" id="emptyMsg">
-      <span class="material-icons-round">event_note</span>
-      <p>아직 기록이 없어요</p>
-    </div>
+    <div class="empty-state" id="emptyMsg"><span class="material-icons-round">event_note</span><p>아직 기록이 없어요</p></div>
   </div>
 
   <div class="page" id="page-entry">
-    <div class="card">
-      <div class="card-title">대상자 선택</div>
-      <div class="person-grid" id="entryPersons"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">기록 유형</div>
-      <div class="action-grid">
-        <button class="action-btn entry" onclick="addEntry('입장')">입장</button>
-        <button class="action-btn exit" onclick="addEntry('퇴장')">퇴장</button>
-        <button class="action-btn leave" onclick="addEntry('외출')">외출</button>
-        <button class="action-btn return" onclick="addEntry('복귀')">복귀</button>
-        <button class="action-btn transfer" onclick="addEntry('인계')">인계</button>
+    <div class="entry-add-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('entry')">
+        <span class="card-title" style="margin:0;">+ 새 출입 기록</span>
+        <span class="material-icons-round" id="entryToggleIcon" style="color:#1a73e8;font-size:20px;">expand_more</span>
       </div>
-      <textarea class="note-input" id="entryNote" rows="2" placeholder="비고 (선택)"></textarea>
+      <div id="entryAddBody" style="display:none;margin-top:12px;">
+        <div class="card-title">유형 선택</div>
+        <div class="type-selector" id="entryTypes"></div>
+        <div class="card-title" style="margin-top:12px;">대상자 선택 (복수 가능)</div>
+        <div class="person-selector" id="entryPersonChips"></div>
+      </div>
     </div>
+    <div class="card-title" style="padding:0 4px;">진행 중인 출입</div>
+    <div class="entry-board" id="entryBoard"></div>
   </div>
 
   <div class="page" id="page-patrol">
-    <div class="card timer-card">
-      <div class="type-toggle">
-        <button class="selected" id="patrolTypeBtn" onclick="setPatrolType('patrol')">순찰</button>
-        <button id="cctvTypeBtn" onclick="setPatrolType('cctv')">CCTV 점검</button>
+    <div class="entry-add-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('patrol')">
+        <span class="card-title" style="margin:0;">+ 새 순찰</span>
+        <span class="material-icons-round" id="patrolToggleIcon" style="color:#34a853;font-size:20px;">expand_more</span>
       </div>
-      <div class="timer-display" id="patrolTimer">00:00</div>
-      <div class="timer-btns">
-        <button class="btn-start" id="patrolStart" onclick="startPatrol()">시작</button>
-        <button class="btn-stop" id="patrolStop" onclick="stopPatrol()" style="display:none">종료</button>
-        <button class="btn-abort" id="patrolAbort" onclick="abortPatrol()" style="display:none">중단</button>
+      <div id="patrolAddBody" style="display:none;margin-top:12px;">
+        <div class="card-title">대상자 선택 (복수 가능)</div>
+        <div class="person-selector" id="patrolPersonChips"></div>
+        <button class="entry-add-btn" style="background:#34a853;" onclick="createPatrol()">+ 순찰 시작</button>
       </div>
-      <textarea class="note-input" id="patrolNote" rows="2" placeholder="메모 (선택)"></textarea>
     </div>
+    <div class="card-title" style="padding:0 4px;">진행/완료 순찰</div>
+    <div class="entry-board" id="patrolBoard"></div>
+  </div>
+
+  <div class="page" id="page-cctv">
+    <div class="entry-add-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('cctv')">
+        <span class="card-title" style="margin:0;">+ 새 CCTV 점검</span>
+        <span class="material-icons-round" id="cctvToggleIcon" style="color:#9334e6;font-size:20px;">expand_more</span>
+      </div>
+      <div id="cctvAddBody" style="display:none;margin-top:12px;">
+        <div class="card-title">대상자 선택 (복수 가능)</div>
+        <div class="person-selector" id="cctvPersonChips"></div>
+        <button class="entry-add-btn" style="background:#9334e6;" onclick="createCCTV()">+ CCTV 점검 시작</button>
+      </div>
+    </div>
+    <div class="card-title" style="padding:0 4px;">진행/완료 점검</div>
+    <div class="entry-board" id="cctvBoard"></div>
   </div>
 
   <div class="page" id="page-keys">
-    <div class="card">
-      <div class="card-title">대상자 선택</div>
-      <div class="person-grid" id="keyPersons"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">열쇠 선택</div>
-      <div class="preset-grid" id="keyPresets"></div>
-      <div class="key-actions">
-        <button style="background:#f9ab00;" onclick="addKey('issue')">불출</button>
-        <button style="background:#4285f4;" onclick="addKey('return')">반납</button>
+    <div class="entry-add-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('key')">
+        <span class="card-title" style="margin:0;">+ 열쇠 기록</span>
+        <span class="material-icons-round" id="keyToggleIcon" style="color:#f9ab00;font-size:20px;">expand_more</span>
+      </div>
+      <div id="keyAddBody" style="display:none;margin-top:12px;">
+        <div class="card-title">대상자 선택</div>
+        <div class="person-grid" id="keyPersons"></div>
+        <div class="card-title">열쇠 선택</div>
+        <div class="preset-grid" id="keyPresets"></div>
+        <div class="key-actions">
+          <button style="background:#f9ab00;" onclick="addKey('issue')">수령</button>
+          <button style="background:#4285f4;" onclick="addKey('return')">반납</button>
+        </div>
       </div>
     </div>
+    <div class="card-title" style="padding:0 4px;">오늘 열쇠 기록</div>
+    <div class="entry-board" id="keyBoard"></div>
   </div>
 
   <div class="page" id="page-overtime">
-    <div class="card">
-      <div class="card-title">대상자 선택</div>
-      <div class="person-grid" id="otPersons"></div>
-    </div>
-    <div class="card timer-card">
-      <div class="timer-display" id="otTimer">00:00</div>
-      <div class="timer-btns">
-        <button class="btn-start" id="otStart" onclick="startOT()">시작</button>
-        <button class="btn-stop" id="otStop" onclick="stopOT()" style="display:none">종료</button>
+    <div class="entry-add-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('ot')">
+        <span class="card-title" style="margin:0;">+ 새 초과근무</span>
+        <span class="material-icons-round" id="otToggleIcon" style="color:#ea4335;font-size:20px;">expand_more</span>
       </div>
-      <textarea class="note-input" id="otNote" rows="2" placeholder="사유 (선택)"></textarea>
+      <div id="otAddBody" style="display:none;margin-top:12px;">
+        <div class="card-title">대상자 선택 (복수 가능)</div>
+        <div class="person-selector" id="otPersonChips"></div>
+        <textarea class="note-input" id="otNote" rows="2" placeholder="사유 (선택)" style="margin-top:0;margin-bottom:12px;"></textarea>
+        <button class="entry-add-btn" style="background:#ea4335;" onclick="createOT()">+ 초과근무 시작</button>
+      </div>
     </div>
+    <div class="card-title" style="padding:0 4px;">진행/완료 초과근무</div>
+    <div class="entry-board" id="otBoard"></div>
   </div>
 
   <div class="page" id="page-settings">
     <div class="card">
       <div class="card-title">인원 관리</div>
       <div id="personnelList"></div>
-      <div class="add-row">
-        <input id="newPersonName" placeholder="이름 입력">
-        <button onclick="addPerson()">추가</button>
-      </div>
+      <div class="add-row"><input id="newPersonName" placeholder="이름 입력"><button onclick="addPerson()">추가</button></div>
+    </div>
+    <div class="card" style="margin-top:12px;">
+      <div class="card-title">출입 유형 관리</div>
+      <div id="entryTypeList"></div>
+      <div class="add-row"><input id="newEntryType" placeholder="유형 이름 (예: 탄약고)"><button onclick="addEntryType()">추가</button></div>
     </div>
     <div class="card" style="margin-top:12px;">
       <div class="card-title">열쇠 프리셋</div>
       <div id="keyPresetList"></div>
-      <div class="add-row">
-        <input id="newKeyPreset" placeholder="열쇠 이름">
-        <button style="background:#f9ab00;" onclick="addKeyPreset()">추가</button>
-      </div>
+      <div class="add-row"><input id="newKeyPreset" placeholder="열쇠 이름"><button style="background:#f9ab00;" onclick="addKeyPreset()">추가</button></div>
     </div>
     <div class="card" style="margin-top:12px;">
       <button style="background:#fff;color:#ea4335;border:1px solid #ea4335;padding:12px;border-radius:10px;cursor:pointer;width:100%;font-size:14px;font-weight:600;" onclick="resetToken()">토큰 초기화</button>
     </div>
   </div>
 
-  <!-- Bottom Navigation -->
-  <div class="bottom-nav">
-    <div class="nav-item active" data-page="timeline">
-      <span class="material-icons-round">view_timeline</span>타임라인
-    </div>
-    <div class="nav-item" data-page="entry">
-      <span class="material-icons-round">door_front</span>출입
-    </div>
-    <div class="nav-item" data-page="patrol">
-      <span class="material-icons-round">security</span>순찰
-    </div>
-    <div class="nav-item" data-page="keys">
-      <span class="material-icons-round">key</span>열쇠
-    </div>
-    <div class="nav-item" data-page="overtime">
-      <span class="material-icons-round">more_time</span>초과근무
-    </div>
-    <div class="nav-item" data-page="settings">
-      <span class="material-icons-round">settings</span>설정
+  <div class="bottom-nav" id="bottomNav">
+    <div class="nav-item active" data-page="timeline" draggable="true"><span class="material-icons-round">view_timeline</span>타임라인</div>
+    <div class="nav-item" data-page="entry" draggable="true"><span class="material-icons-round">door_front</span>출입</div>
+    <div class="nav-item" data-page="patrol" draggable="true"><span class="material-icons-round">security</span>순찰</div>
+    <div class="nav-item" data-page="cctv" draggable="true"><span class="material-icons-round">videocam</span>CCTV</div>
+    <div class="nav-item" data-page="keys" draggable="true"><span class="material-icons-round">key</span>열쇠</div>
+    <div class="nav-item" data-page="overtime" draggable="true"><span class="material-icons-round">more_time</span>초과근무</div>
+    <div class="nav-item" data-page="settings" draggable="true"><span class="material-icons-round">settings</span>설정</div>
+  </div>
+</div>
+
+<!-- Calendar Modal -->
+<div class="modal-bg" id="calendarModal">
+  <div class="calendar-modal">
+    <div class="card-title">날짜 선택</div>
+    <input type="date" id="calendarInput">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeCalendar()">취소</button>
+      <button class="btn-confirm" onclick="selectDate()">선택</button>
     </div>
   </div>
 </div>
@@ -417,20 +321,31 @@ body {
 
 <script>
 const OWNER='DDDO12',REPO='duty-log',BRANCH='main',API='https://api.github.com';
-let TOKEN='',today=new Date().toISOString().split('T')[0];
+let TOKEN='',viewDate=new Date().toISOString().split('T')[0];
 let events=[],personnel=[],keyPresets=['탄약고','정문','후문','무기고'];
-let selectedPerson={entry:null,key:null,ot:null},selectedKey=null;
-let patrolType='patrol',patrolRunning=false,patrolStartTime=null,patrolInterval=null;
-let otRunning=false,otStartTime=null,otInterval=null,otPerson=null;
+let entryTypes=['탄약고','무기고','BL탄약고','교탄탄약고','간이탄약고'];
+let selectedPerson={key:null},selectedKey=null;
+let selectedEntryType=null, selectedEntryPersons=new Set();
+let selectedPatrolPersons=new Set(), selectedCctvPersons=new Set(), selectedOtPersons=new Set();
 let eventsSha=null;
+// 게시판 타이머 (entry/patrol/cctv/overtime 통합)
+let boardTimers={}; // id -> {interval, startTime, paused, elapsed, category, type, persons, done, note}
+let timerIdCounter=0;
+// 날짜별 데이터 존재 캐시
+let datesWithData=new Set();
 
+// ── 초기화 ──
 function init(){
   TOKEN=localStorage.getItem('gh_token')||'';
   if(!TOKEN){document.getElementById('setup').style.display='flex';document.getElementById('app').style.display='none';return;}
   document.getElementById('setup').style.display='none';
   document.getElementById('app').style.display='block';
-  const wd=['일','월','화','수','목','금','토'][new Date().getDay()];
-  document.getElementById('todayDate').textContent=today+' ('+wd+')';
+  setupNav();setupNavDrag();updateDateLabel();
+  loadPersonnel().then(()=>{loadEvents();restoreAllTimers();renderAllBoards();});
+  setInterval(()=>{saveEvents();},12*60*60*1000);
+}
+
+function setupNav(){
   document.querySelectorAll('.nav-item').forEach(n=>{
     n.addEventListener('click',()=>{
       document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
@@ -439,7 +354,30 @@ function init(){
       document.getElementById('page-'+n.dataset.page).classList.add('active');
     });
   });
-  loadPersonnel();loadEvents();restoreTimers();
+}
+// 네비 드래그 순서 변경
+function setupNavDrag(){
+  const nav=document.getElementById('bottomNav');
+  let dragged=null;
+  nav.addEventListener('dragstart',e=>{dragged=e.target.closest('.nav-item');if(dragged)dragged.style.opacity='0.4';});
+  nav.addEventListener('dragend',e=>{if(dragged)dragged.style.opacity='1';dragged=null;});
+  nav.addEventListener('dragover',e=>{e.preventDefault();});
+  nav.addEventListener('drop',e=>{
+    e.preventDefault();const target=e.target.closest('.nav-item');
+    if(target&&dragged&&target!==dragged){
+      const items=[...nav.querySelectorAll('.nav-item')];
+      const di=items.indexOf(dragged),ti=items.indexOf(target);
+      if(di<ti)target.after(dragged);else target.before(dragged);
+      // 순서 저장
+      const order=[...nav.querySelectorAll('.nav-item')].map(n=>n.dataset.page);
+      localStorage.setItem('nav_order',JSON.stringify(order));
+    }
+  });
+  // 저장된 순서 복원
+  try{
+    const order=JSON.parse(localStorage.getItem('nav_order')||'[]');
+    if(order.length){order.forEach(p=>{const el=nav.querySelector('[data-page="'+p+'"]');if(el)nav.appendChild(el);});}
+  }catch(e){}
 }
 
 function saveToken(){
@@ -448,85 +386,102 @@ function saveToken(){
 }
 function resetToken(){localStorage.removeItem('gh_token');location.reload();}
 
-function b64decode(b64){
-  const bin=atob(b64);
-  const bytes=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-  return new TextDecoder('utf-8').decode(bytes);
+// ── 날짜 이동 ──
+function updateDateLabel(){
+  const d=new Date(viewDate+'T00:00:00');
+  const wd=['일','월','화','수','목','금','토'][d.getDay()];
+  const today=new Date().toISOString().split('T')[0];
+  const label=document.getElementById('dateLabel');
+  let text=viewDate+' ('+wd+')';
+  if(viewDate===today) text='오늘 '+text;
+  label.textContent=text;
+  label.className='current-date'+(datesWithData.has(viewDate)?' has-data':'');
+  document.getElementById('todayDate').textContent=text;
 }
-function b64encode(str){
-  const bytes=new TextEncoder().encode(str);
-  let bin='';
-  bytes.forEach(b=>{bin+=String.fromCharCode(b);});
-  return btoa(bin);
+function prevDay(){
+  const d=new Date(viewDate+'T00:00:00');d.setDate(d.getDate()-1);
+  viewDate=d.toISOString().split('T')[0];updateDateLabel();loadEvents();
 }
+function nextDay(){
+  const d=new Date(viewDate+'T00:00:00');d.setDate(d.getDate()+1);
+  viewDate=d.toISOString().split('T')[0];updateDateLabel();loadEvents();
+}
+function openCalendar(){
+  document.getElementById('calendarInput').value=viewDate;
+  document.getElementById('calendarModal').classList.add('show');
+}
+function closeCalendar(){document.getElementById('calendarModal').classList.remove('show');}
+function selectDate(){
+  const v=document.getElementById('calendarInput').value;
+  if(v){viewDate=v;updateDateLabel();loadEvents();}
+  closeCalendar();
+}
+
+// ── GitHub API ──
+function b64decode(b64){return new TextDecoder().decode(Uint8Array.from(atob(b64),c=>c.charCodeAt(0)));}
+function b64encode(str){const bytes=new TextEncoder().encode(str);let bin='';bytes.forEach(b=>{bin+=String.fromCharCode(b);});return btoa(bin);}
 async function ghGet(path){
   try{
     const r=await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path+'?ref='+BRANCH,{
-      headers:{'Authorization':'token '+TOKEN,'Accept':'application/vnd.github.v3+json'}
-    });
-    if(r.status===404)return null;
-    if(!r.ok){console.error('ghGet fail:',r.status,await r.text());return null;}
-    const d=await r.json();
-    return{content:JSON.parse(b64decode(d.content)),sha:d.sha};
-  }catch(e){console.error('ghGet error:',e);toast('GitHub 읽기 오류: '+e.message);return null;}
+      headers:{'Authorization':'token '+TOKEN,'Accept':'application/vnd.github.v3+json'}});
+    if(r.status===404)return null;if(!r.ok)return null;
+    const d=await r.json();return{content:JSON.parse(b64decode(d.content)),sha:d.sha};
+  }catch(e){console.error('ghGet:',e);return null;}
 }
 async function ghPut(path,content,sha,msg){
   try{
     const body={message:msg,content:b64encode(JSON.stringify(content,null,2)),branch:BRANCH};
     if(sha)body.sha=sha;
     const r=await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path,{
-      method:'PUT',headers:{'Authorization':'token '+TOKEN,'Content-Type':'application/json'},
-      body:JSON.stringify(body)
-    });
-    if(!r.ok){
-      const err=await r.text();
-      console.error('ghPut fail:',r.status,err);
-      if(r.status===409||r.status===422){
-        toast('SHA 충돌 - 새로고침 후 다시 시도');
-        await loadEvents();
-      }else if(r.status===403){
-        toast('토큰 권한 부족 (repo 권한 필요)');
-      }else{
-        toast('저장 실패: HTTP '+r.status);
-      }
-      return false;
-    }
+      method:'PUT',headers:{'Authorization':'token '+TOKEN,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){if(r.status===409||r.status===422){console.log('SHA conflict, will retry');}return false;}
     return true;
-  }catch(e){console.error('ghPut error:',e);toast('GitHub 저장 오류: '+e.message);return false;}
+  }catch(e){console.error('ghPut:',e);return false;}
 }
 
 async function loadEvents(){
-  try{const r=await ghGet('events/'+today+'.json');
-    if(r){events=r.content.events||[];eventsSha=r.sha;}
-    else{events=[];eventsSha=null;}
-  }catch(e){events=[];}
-  renderTimeline();
+  const r=await ghGet('events/'+viewDate+'.json');
+  if(r){events=r.content.events||[];eventsSha=r.sha;datesWithData.add(viewDate);}
+  else{events=[];eventsSha=null;}
+  renderTimeline();renderEntryBoard();renderKeyBoard();updateDateLabel();
 }
 async function loadPersonnel(){
-  try{const r=await ghGet('personnel.json');
-    if(r){personnel=r.content.personnel||[];if(r.content.key_presets)keyPresets=r.content.key_presets;}
-  }catch(e){}
-  renderPersonButtons();renderKeyPresets();renderSettings();
+  const r=await ghGet('personnel.json');
+  if(r){
+    personnel=r.content.personnel||[];
+    if(r.content.key_presets)keyPresets=r.content.key_presets;
+    if(r.content.entry_types)entryTypes=r.content.entry_types;
+  }
+  renderPersonButtons();renderKeyPresets();renderSettings();renderEntryForm();
+  renderPersonChips('patrol');renderPersonChips('cctv');renderPersonChips('ot');
 }
+let _saving=false;
 async function saveEvents(){
+  if(_saving){await new Promise(r=>setTimeout(r,500));return saveEvents();}
+  _saving=true;
   try{
-    const ok=await ghPut('events/'+today+'.json',{date:today,events:events},eventsSha,'update: '+today);
-    if(ok){
-      const r=await ghGet('events/'+today+'.json');
-      if(r)eventsSha=r.sha;
+    // 충돌 시 자동 재시도 (최대 2회)
+    for(let retry=0;retry<2;retry++){
+      const ok=await ghPut('events/'+viewDate+'.json',{date:viewDate,events},eventsSha,'update: '+viewDate);
+      if(ok){
+        datesWithData.add(viewDate);
+        const r=await ghGet('events/'+viewDate+'.json');
+        if(r)eventsSha=r.sha;
+        return true;
+      }
+      // SHA 충돌 -> 최신 SHA 가져와서 재시도
+      const fresh=await ghGet('events/'+viewDate+'.json');
+      if(fresh){eventsSha=fresh.sha;}else{eventsSha=null;}
     }
-    return ok;
-  }catch(e){console.error('saveEvents error:',e);toast('이벤트 저장 오류');return false;}
+    return false;
+  }finally{_saving=false;}
 }
 async function savePersonnel(){
-  try{
-    const r=await ghGet('personnel.json');
-    const sha=r?r.sha:null;
-    return await ghPut('personnel.json',{personnel,key_presets:keyPresets},sha,'update personnel');
-  }catch(e){console.error('savePersonnel error:',e);toast('인원 저장 오류');return false;}
+  const r=await ghGet('personnel.json');const sha=r?r.sha:null;
+  return await ghPut('personnel.json',{personnel,key_presets:keyPresets,entry_types:entryTypes},sha,'update personnel');
 }
 
+// ── 타임라인 렌더링 ──
 function renderTimeline(){
   const list=document.getElementById('timelineList'),empty=document.getElementById('emptyMsg'),stats=document.getElementById('statsRow');
   if(!events.length){list.innerHTML='';empty.style.display='block';stats.innerHTML='';return;}
@@ -535,225 +490,289 @@ function renderTimeline(){
   const lb={entry:'출입',patrol:'순찰',cctv:'CCTV',key:'열쇠',overtime:'초과근무'};
   stats.innerHTML=Object.entries(counts).map(([k,v])=>'<span class="stat-badge">'+lb[k]+' '+v+'건</span>').join('');
   const sorted=[...events].sort((a,b)=>a.time.localeCompare(b.time));
-  list.innerHTML=sorted.map(ev=>{
-    const oi=events.indexOf(ev),tc='tag-'+ev.type,tg=lb[ev.type]||ev.type;
+  list.innerHTML=sorted.map((ev,i)=>{
+    const tc='tag-'+ev.type,tg=lb[ev.type]||ev.type;
     let d='';
-    if(ev.type==='entry')d=(ev.subject||'')+' '+(ev.action||'');
+    if(ev.type==='entry')d=(ev.subject||'')+' '+(ev.action||'')+' '+(ev.location||'');
     else if(ev.type==='patrol'||ev.type==='cctv')d=ev.action==='start'?'시작':ev.action==='stop'?'종료':'중단';
-    else if(ev.type==='key')d=(ev.action==='issue'?'불출':'반납')+' '+(ev.subject||'')+' '+(ev.location||'');
+    else if(ev.type==='key')d=(ev.action==='issue'?'수령':'반납')+' '+(ev.subject||'')+' '+(ev.location||'');
     else if(ev.type==='overtime')d=(ev.action==='start'?'시작':'종료')+' '+(ev.subject||'');
     if(ev.note)d+=' ('+ev.note+')';
+    if(ev.duration)d+=' ['+ev.duration+']';
+    const oi=events.indexOf(ev);
     return '<div class="timeline-item"><span class="timeline-time">'+ev.time+'</span><span class="timeline-tag '+tc+'">'+tg+'</span><span class="timeline-desc">'+d+'</span><span class="timeline-del material-icons-round" onclick="deleteEvent('+oi+')">close</span></div>';
   }).join('');
 }
 
-function renderPersonButtons(){
-  ['entry','key','ot'].forEach(ctx=>{
-    const el=document.getElementById(ctx==='ot'?'otPersons':ctx+'Persons');
-    if(!el)return;
-    el.innerHTML=personnel.map(p=>'<div class="person-btn" onclick="selectPerson(\''+ctx+'\',\''+p.name+'\')" id="p-'+ctx+'-'+p.name+'">'+p.name+'</div>').join('');
+// ── 출입 게시판형 ──
+function renderEntryForm(){
+  // 유형 칩
+  const tc=document.getElementById('entryTypes');
+  tc.innerHTML=entryTypes.map(t=>'<div class="type-chip'+(selectedEntryType===t?' selected':'')+'" onclick="toggleEntryType(\''+t+'\')">'+t+'</div>').join('');
+  // 대상자 칩
+  const pc=document.getElementById('entryPersonChips');
+  pc.innerHTML=personnel.map(p=>'<div class="person-chip'+(selectedEntryPersons.has(p.name)?' selected':'')+'" onclick="toggleEntryPerson(\''+p.name+'\')">'+p.name+'</div>').join('');
+}
+function toggleEntryType(t){selectedEntryType=selectedEntryType===t?null:t;renderEntryForm();}
+let _entryAutoTimer=null;
+function toggleEntryPerson(n){
+  if(selectedEntryPersons.has(n))selectedEntryPersons.delete(n);else selectedEntryPersons.add(n);
+  renderEntryForm();
+  // 유형 + 대상자 둘 다 있으면 1.5초 후 자동 등록 (복수 선택 시간 확보)
+  clearTimeout(_entryAutoTimer);
+  if(selectedEntryType && selectedEntryPersons.size){
+    _entryAutoTimer=setTimeout(()=>{
+      if(selectedEntryType && selectedEntryPersons.size){
+        createEntry();
+        toggleAddForm('entry');
+      }
+    },1500);
+  }
+}
+
+function createEntry(){
+  if(!selectedEntryType){toast('유형을 선택하세요');return;}
+  if(!selectedEntryPersons.size){toast('대상자를 선택하세요');return;}
+  const names=[...selectedEntryPersons].join(', ');
+  const ev={time:nowTime(),type:'entry',action:'입장',subject:names,location:selectedEntryType};
+  events.push(ev);
+  saveEvents().then(ok=>{if(ok){toast(names+' '+selectedEntryType+' 입장');renderTimeline();}});
+  createBoardTimer('entry',selectedEntryType,names,'');
+  selectedEntryPersons.clear();selectedEntryType=null;renderEntryForm();renderAllBoards();
+}
+function createPatrol(){
+  if(!selectedPatrolPersons.size){toast('대상자를 선택하세요');return;}
+  const names=[...selectedPatrolPersons].join(', ');
+  const ev={time:nowTime(),type:'patrol',action:'시작',subject:names};
+  events.push(ev);
+  saveEvents().then(ok=>{if(ok){toast(names+' 순찰 시작');renderTimeline();}});
+  createBoardTimer('patrol','순찰',names,'');
+  selectedPatrolPersons.clear();renderPersonChips('patrol');renderAllBoards();
+}
+function createCCTV(){
+  if(!selectedCctvPersons.size){toast('대상자를 선택하세요');return;}
+  const names=[...selectedCctvPersons].join(', ');
+  const ev={time:nowTime(),type:'cctv',action:'시작',subject:names};
+  events.push(ev);
+  saveEvents().then(ok=>{if(ok){toast(names+' CCTV 점검 시작');renderTimeline();}});
+  createBoardTimer('cctv','CCTV',names,'');
+  selectedCctvPersons.clear();renderPersonChips('cctv');renderAllBoards();
+}
+function createOT(){
+  if(!selectedOtPersons.size){toast('대상자를 선택하세요');return;}
+  const names=[...selectedOtPersons].join(', ');
+  const note=document.getElementById('otNote').value.trim();
+  const ev={time:nowTime(),type:'overtime',action:'시작',subject:names,note};
+  events.push(ev);
+  saveEvents().then(ok=>{if(ok){toast(names+' 초과근무 시작');renderTimeline();}});
+  createBoardTimer('overtime','초과근무',names,note);
+  document.getElementById('otNote').value='';
+  selectedOtPersons.clear();renderPersonChips('ot');renderAllBoards();
+}
+
+function fmtTime(ms){
+  const s=Math.floor(ms/1000),m=Math.floor(s/60),sec=s%60;
+  return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+}
+
+// ── 대상자 칩 렌더링 (복수 선택, patrol/cctv/ot용) ──
+function renderPersonChips(ctx){
+  const map={patrol:'patrolPersonChips',cctv:'cctvPersonChips',ot:'otPersonChips'};
+  const sets={patrol:selectedPatrolPersons,cctv:selectedCctvPersons,ot:selectedOtPersons};
+  const el=document.getElementById(map[ctx]);if(!el)return;
+  const sel=sets[ctx];
+  el.innerHTML=personnel.map(p=>'<div class="person-chip'+(sel.has(p.name)?' selected':'')+'" onclick="toggleBoardPerson(\''+ctx+'\',\''+p.name+'\')">'+p.name+'</div>').join('');
+}
+function toggleBoardPerson(ctx,name){
+  const sets={patrol:selectedPatrolPersons,cctv:selectedCctvPersons,ot:selectedOtPersons};
+  const s=sets[ctx];
+  if(s.has(name))s.delete(name);else s.add(name);
+  renderPersonChips(ctx);
+}
+
+// ── 통합 보드 렌더링 (entry/patrol/cctv/overtime 공용) ──
+function renderBoard(category, boardId, typeColor){
+  const board=document.getElementById(boardId);
+  const ids=Object.keys(boardTimers).filter(id=>boardTimers[id].category===category).sort((a,b)=>b-a);
+  if(!ids.length){board.innerHTML='<div class="empty-state"><span class="material-icons-round">check_circle</span><p>기록이 없어요</p></div>';return;}
+  board.innerHTML=ids.map(id=>{
+    const t=boardTimers[id];
+    const elapsed=getBoardElapsed(id);
+    const time=fmtTime(elapsed);
+    const tc=typeColor||'#1a73e8';
+    const editBtn='<button style="background:#78909c;width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-right:4px;" onclick="editBoard('+id+')"><span class="material-icons-round" style="font-size:18px;color:#fff;">edit</span></button>';
+    if(t.done){
+      return '<div class="entry-row done">'+editBtn+'<span class="entry-type" style="background:'+tc+'">'+t.type+'</span><span class="entry-persons">'+t.persons+'</span><span class="entry-timer">'+time+'</span>'+(t.note?'<span style="font-size:12px;color:#999;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+t.note+'">'+t.note+'</span>':'')+'<span class="entry-check material-icons-round">check_circle</span></div>';
+    }
+    const running=!t.paused;
+    let noteBtn='';
+    if(category==='cctv'){
+      noteBtn='<button style="background:#9334e6;width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;" onclick="openMemo('+id+')"><span class="material-icons-round" style="font-size:18px;color:#fff;">edit_note</span></button>';
+    }
+    return '<div class="entry-row">'+editBtn+'<span class="entry-type" style="background:'+tc+'">'+t.type+'</span><span class="entry-persons">'+t.persons+'</span><span class="entry-timer'+(running?' running':'')+'">'+time+'</span><div class="entry-actions">'
+      +noteBtn
+      +(running?'<button class="btn-pause" onclick="pauseBoard('+id+')"><span class="material-icons-round">pause</span></button>'
+               :'<button class="btn-play" onclick="resumeBoard('+id+')"><span class="material-icons-round">play_arrow</span></button>')
+      +'<button class="btn-stop-entry" onclick="stopBoard('+id+')"><span class="material-icons-round">stop</span></button></div></div>';
+  }).join('');
+}
+function renderEntryBoard(){renderBoard('entry','entryBoard','#1a73e8');}
+function renderAllBoards(){renderEntryBoard();renderBoard('patrol','patrolBoard','#34a853');renderBoard('cctv','cctvBoard','#9334e6');renderBoard('overtime','otBoard','#ea4335');}
+
+// ── 통합 타이머 로직 ──
+function getBoardElapsed(id){
+  const t=boardTimers[id];if(!t)return 0;
+  if(t.paused||t.done)return t.elapsed;
+  return t.elapsed+(Date.now()-t.startTime);
+}
+function createBoardTimer(category, type, persons, note){
+  const id=++timerIdCounter;
+  boardTimers[id]={startTime:Date.now(),paused:false,elapsed:0,interval:null,category,type,persons,done:false,note:note||''};
+  boardTimers[id].interval=setInterval(()=>{renderAllBoards();},1000);
+  saveBoardState();
+  return id;
+}
+function pauseBoard(id){
+  const t=boardTimers[id];if(!t)return;
+  t.paused=true;t.elapsed+=(Date.now()-t.startTime);
+  clearInterval(t.interval);t.interval=null;
+  saveBoardState();renderAllBoards();
+}
+function resumeBoard(id){
+  const t=boardTimers[id];if(!t)return;
+  t.paused=false;t.startTime=Date.now();
+  t.interval=setInterval(()=>{renderAllBoards();},1000);
+  saveBoardState();renderAllBoards();
+}
+function stopBoard(id){
+  const t=boardTimers[id];if(!t)return;
+  if(!t.paused)t.elapsed+=(Date.now()-t.startTime);
+  clearInterval(t.interval);t.interval=null;t.done=true;
+  const dur=fmtTime(t.elapsed);
+  // 종료 이벤트
+  const evType=t.category==='cctv'?'cctv':t.category;
+  const ev={time:nowTime(),type:evType,action:'종료',subject:t.persons,location:t.type,duration:dur,note:t.note||''};
+  events.push(ev);
+  saveEvents().then(ok=>{if(ok){toast(t.persons+' '+t.type+' 종료 ('+dur+')');renderTimeline();}});
+  saveBoardState();renderAllBoards();
+}
+// CCTV 메모 팝업
+function openMemo(id){
+  const t=boardTimers[id];if(!t)return;
+  const note=prompt('메모 입력:',t.note||'');
+  if(note!==null){t.note=note;saveBoardState();renderAllBoards();}
+}
+function saveBoardState(){
+  const s={};Object.entries(boardTimers).forEach(([id,t])=>{
+    s[id]={category:t.category,type:t.type,persons:t.persons,elapsed:t.paused||t.done?t.elapsed:t.elapsed+(Date.now()-t.startTime),paused:t.paused,done:t.done,note:t.note||''};
   });
+  localStorage.setItem('boardTimers',JSON.stringify(s));
+}
+function restoreAllTimers(){
+  try{
+    const s=JSON.parse(localStorage.getItem('boardTimers')||'{}');
+    Object.entries(s).forEach(([id,t])=>{
+      const nid=parseInt(id);if(nid>=timerIdCounter)timerIdCounter=nid;
+      boardTimers[nid]={...t,interval:null,startTime:Date.now()};
+      if(!t.done&&!t.paused){
+        boardTimers[nid].interval=setInterval(()=>{renderAllBoards();},1000);
+      }
+    });
+  }catch(e){}
+}
+
+// ── 공통 함수 ──
+function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function renderPersonButtons(){
+  const el=document.getElementById('keyPersons');if(!el)return;
+  el.innerHTML=personnel.map(p=>'<div class="person-btn" onclick="selectPerson(\'key\',\''+p.name+'\')" id="p-key-'+p.name+'">'+p.name+'</div>').join('');
 }
 function renderKeyPresets(){
-  const el=document.getElementById('keyPresets');
-  if(!el)return;
+  const el=document.getElementById('keyPresets');if(!el)return;
   el.innerHTML=keyPresets.map(k=>'<div class="preset-btn" onclick="selectKey(\''+k+'\')" id="kp-'+k+'">'+k+'</div>').join('');
 }
 function renderSettings(){
-  document.getElementById('personnelList').innerHTML=personnel.map((p,i)=>'<div class="setting-item"><span>'+p.name+(p.rank?' ('+p.rank+')':'')+'</span><span class="setting-del" onclick="removePerson('+i+')">삭제</span></div>').join('');
+  document.getElementById('personnelList').innerHTML=personnel.map((p,i)=>'<div class="setting-item"><span>'+p.name+'</span><span class="setting-del" onclick="removePerson('+i+')">삭제</span></div>').join('');
   document.getElementById('keyPresetList').innerHTML=keyPresets.map((k,i)=>'<div class="setting-item"><span>'+k+'</span><span class="setting-del" onclick="removeKeyPreset('+i+')">삭제</span></div>').join('');
+  document.getElementById('entryTypeList').innerHTML=entryTypes.map((t,i)=>'<div class="setting-item"><span>'+t+'</span><span class="setting-del" onclick="removeEntryType('+i+')">삭제</span></div>').join('');
 }
 
 function selectPerson(ctx,name){
   selectedPerson[ctx]=selectedPerson[ctx]===name?null:name;
-  document.querySelectorAll('#'+(ctx==='ot'?'otPersons':ctx+'Persons')+' .person-btn').forEach(b=>{
-    b.classList.toggle('selected',b.textContent===selectedPerson[ctx]);
-  });
+  document.querySelectorAll('#'+(ctx==='ot'?'otPersons':ctx+'Persons')+' .person-btn').forEach(b=>{b.classList.toggle('selected',b.textContent===selectedPerson[ctx]);});
 }
-function selectKey(name){
-  selectedKey=selectedKey===name?null:name;
-  document.querySelectorAll('#keyPresets .preset-btn').forEach(b=>{
-    b.classList.toggle('selected',b.textContent===selectedKey);
-  });
-}
+function selectKey(name){selectedKey=selectedKey===name?null:name;document.querySelectorAll('#keyPresets .preset-btn').forEach(b=>{b.classList.toggle('selected',b.textContent===selectedKey);});}
 
-function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
-
-async function addEntry(action){
-  try{
-    if(!selectedPerson.entry){toast('대상자를 선택하세요');return;}
-    const ev={time:nowTime(),type:'entry',action,subject:selectedPerson.entry,note:document.getElementById('entryNote').value.trim()};
-    events.push(ev);
-    document.getElementById('entryNote').value='';
-    if(await saveEvents()){toast(selectedPerson.entry+' '+action+' 기록');renderTimeline();}
-    else{events.pop();}
-  }catch(e){console.error('addEntry error:',e);toast('출입 기록 오류: '+e.message);}
-}
+// ── 열쇠 ──
 async function addKey(action){
-  try{
-    if(!selectedPerson.key){toast('대상자를 선택하세요');return;}
-    const ev={time:nowTime(),type:'key',action,subject:selectedPerson.key,location:selectedKey||'',note:''};
-    events.push(ev);
-    if(await saveEvents()){toast('열쇠 '+(action==='issue'?'불출':'반납')+' - '+selectedPerson.key);renderTimeline();}
-    else{events.pop();}
-  }catch(e){console.error('addKey error:',e);toast('열쇠 기록 오류: '+e.message);}
+  if(!selectedPerson.key){toast('대상자를 선택하세요');return;}
+  events.push({time:nowTime(),type:'key',action,subject:selectedPerson.key,location:selectedKey||''});
+  if(await saveEvents()){toast('열쇠 '+(action==='issue'?'수령':'반납'));renderTimeline();renderKeyBoard();}else events.pop();
+}
+function renderKeyBoard(){
+  const board=document.getElementById('keyBoard');if(!board)return;
+  const keyEvents=events.filter(e=>e.type==='key');
+  if(!keyEvents.length){board.innerHTML='<div class="empty-state"><span class="material-icons-round">key_off</span><p>기록이 없어요</p></div>';return;}
+  // 수령-반납 매칭: subject+location 기준
+  const issued=[], returned=new Set();
+  keyEvents.forEach((ev,i)=>{
+    if(ev.action==='issue') issued.push({...ev,idx:i,matched:false});
+  });
+  keyEvents.forEach(ev=>{
+    if(ev.action==='return'){
+      const match=issued.find(is=>!is.matched&&is.subject===ev.subject&&is.location===ev.location);
+      if(match){match.matched=true;match.returnTime=ev.time;}
+    }
+  });
+  // 미반납 먼저, 반납 완료 나중
+  const sorted=[...issued].sort((a,b)=>(a.matched?1:0)-(b.matched?1:0)||b.time.localeCompare(a.time));
+  board.innerHTML=sorted.map(is=>{
+    if(is.matched){
+      return '<div class="entry-row done"><span class="entry-type" style="background:#4285f4;">반납</span><span class="entry-persons">'+is.subject+'</span><span style="font-size:13px;color:#666;">'+is.location+'</span><span style="font-size:12px;color:#999;margin-left:auto;">'+is.time+' ~ '+is.returnTime+'</span><span class="entry-check material-icons-round">check_circle</span></div>';
+    }
+    return '<div class="entry-row"><span class="entry-type" style="background:#f9ab00;">수령</span><span class="entry-persons">'+is.subject+'</span><span style="font-size:13px;color:#666;">'+is.location+'</span><span style="font-size:12px;color:#1a73e8;margin-left:auto;">'+is.time+'</span><button style="background:#4285f4;color:#fff;border:none;padding:6px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;margin-left:8px;" onclick="returnKey(\''+is.subject+'\',\''+is.location+'\')">반납</button></div>';
+  }).join('');
+}
+async function returnKey(subject,location){
+  events.push({time:nowTime(),type:'key',action:'return',subject,location});
+  if(await saveEvents()){toast(subject+' '+location+' 반납');renderTimeline();renderKeyBoard();}else events.pop();
 }
 
-function setPatrolType(type){
-  patrolType=type;
-  document.getElementById('patrolTypeBtn').classList.toggle('selected',type==='patrol');
-  document.getElementById('cctvTypeBtn').classList.toggle('selected',type==='cctv');
-}
-async function startPatrol(){
-  try{
-    const ev={time:nowTime(),type:patrolType,action:'start',note:document.getElementById('patrolNote').value.trim()};
-    events.push(ev);
-    if(await saveEvents()){
-      patrolRunning=true;patrolStartTime=Date.now();
-      localStorage.setItem('patrol_start',String(patrolStartTime));
-      localStorage.setItem('patrol_type',patrolType);
-      updatePatrolUI();startPatrolTimer();
-      toast((patrolType==='patrol'?'순찰':'CCTV 점검')+' 시작');renderTimeline();
-    }else{events.pop();}
-  }catch(e){console.error('startPatrol error:',e);toast('순찰 시작 오류: '+e.message);}
-}
-async function stopPatrol(){
-  try{
-    const ev={time:nowTime(),type:patrolType,action:'stop',note:document.getElementById('patrolNote').value.trim()};
-    events.push(ev);
-    if(await saveEvents()){
-      patrolRunning=false;clearInterval(patrolInterval);
-      localStorage.removeItem('patrol_start');localStorage.removeItem('patrol_type');
-      updatePatrolUI();
-      document.getElementById('patrolTimer').textContent='00:00';
-      document.getElementById('patrolTimer').classList.remove('running');
-      document.getElementById('patrolNote').value='';
-      toast((patrolType==='patrol'?'순찰':'CCTV 점검')+' 종료');renderTimeline();
-    }else{events.pop();}
-  }catch(e){console.error('stopPatrol error:',e);toast('순찰 종료 오류: '+e.message);}
-}
-async function abortPatrol(){
-  try{
-    events.push({time:nowTime(),type:patrolType,action:'abort',note:'중단'});
-    await saveEvents();patrolRunning=false;clearInterval(patrolInterval);
-    localStorage.removeItem('patrol_start');localStorage.removeItem('patrol_type');
-    updatePatrolUI();document.getElementById('patrolTimer').textContent='00:00';
-    document.getElementById('patrolTimer').classList.remove('running');
-    toast('중단');renderTimeline();
-  }catch(e){console.error('abortPatrol error:',e);toast('중단 오류: '+e.message);}
-}
-function updatePatrolUI(){
-  document.getElementById('patrolStart').style.display=patrolRunning?'none':'';
-  document.getElementById('patrolStop').style.display=patrolRunning?'':'none';
-  document.getElementById('patrolAbort').style.display=patrolRunning?'':'none';
-}
-function startPatrolTimer(){
-  document.getElementById('patrolTimer').classList.add('running');
-  patrolInterval=setInterval(()=>{
-    const e=Math.floor((Date.now()-patrolStartTime)/1000),m=Math.floor(e/60),s=e%60;
-    document.getElementById('patrolTimer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
-  },1000);
+// ── 삭제/추가 ──
+async function deleteEvent(idx){if(!confirm('삭제할까요?'))return;const bk=[...events];events.splice(idx,1);if(await saveEvents()){toast('삭제');renderTimeline();}else{events=bk;renderTimeline();}}
+async function addPerson(){const n=document.getElementById('newPersonName').value.trim();if(!n)return;personnel.push({name:n});document.getElementById('newPersonName').value='';if(await savePersonnel()){toast(n+' 추가');renderPersonButtons();renderSettings();renderEntryForm();}else personnel.pop();}
+async function removePerson(i){if(!confirm(personnel[i].name+' 삭제?'))return;const bk=[...personnel];personnel.splice(i,1);if(await savePersonnel()){renderPersonButtons();renderSettings();renderEntryForm();}else personnel=bk;}
+async function addKeyPreset(){const n=document.getElementById('newKeyPreset').value.trim();if(!n)return;keyPresets.push(n);document.getElementById('newKeyPreset').value='';if(await savePersonnel()){renderKeyPresets();renderSettings();}else keyPresets.pop();}
+async function removeKeyPreset(i){const bk=[...keyPresets];keyPresets.splice(i,1);if(await savePersonnel()){renderKeyPresets();renderSettings();}else keyPresets=bk;}
+async function addEntryType(){const n=document.getElementById('newEntryType').value.trim();if(!n)return;entryTypes.push(n);document.getElementById('newEntryType').value='';if(await savePersonnel()){renderSettings();renderEntryForm();}else entryTypes.pop();}
+async function removeEntryType(i){const bk=[...entryTypes];entryTypes.splice(i,1);if(await savePersonnel()){renderSettings();renderEntryForm();}else entryTypes=bk;}
+
+// ── 토글 접기/펼치기 ──
+function toggleAddForm(ctx){
+  const bodyId={entry:'entryAddBody',patrol:'patrolAddBody',cctv:'cctvAddBody',ot:'otAddBody',key:'keyAddBody'}[ctx];
+  const iconId={entry:'entryToggleIcon',patrol:'patrolToggleIcon',cctv:'cctvToggleIcon',ot:'otToggleIcon',key:'keyToggleIcon'}[ctx];
+  const body=document.getElementById(bodyId),icon=document.getElementById(iconId);
+  if(!body)return;
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  icon.textContent=open?'expand_more':'expand_less';
 }
 
-async function startOT(){
-  try{
-    if(!selectedPerson.ot){toast('대상자를 선택하세요');return;}
-    const ev={time:nowTime(),type:'overtime',action:'start',subject:selectedPerson.ot,note:document.getElementById('otNote').value.trim()};
-    events.push(ev);
-    if(await saveEvents()){
-      otRunning=true;otStartTime=Date.now();otPerson=selectedPerson.ot;
-      localStorage.setItem('ot_start',String(otStartTime));localStorage.setItem('ot_person',otPerson);
-      updateOTUI();startOTTimer();toast('초과근무 시작 - '+otPerson);renderTimeline();
-    }else{events.pop();}
-  }catch(e){console.error('startOT error:',e);toast('초과근무 시작 오류: '+e.message);}
-}
-async function stopOT(){
-  try{
-    const ev={time:nowTime(),type:'overtime',action:'stop',subject:otPerson||selectedPerson.ot||'',note:document.getElementById('otNote').value.trim()};
-    events.push(ev);
-    if(await saveEvents()){
-      otRunning=false;clearInterval(otInterval);
-      localStorage.removeItem('ot_start');localStorage.removeItem('ot_person');
-      updateOTUI();document.getElementById('otTimer').textContent='00:00';
-      document.getElementById('otTimer').classList.remove('running');
-      document.getElementById('otNote').value='';toast('초과근무 종료');renderTimeline();
-    }else{events.pop();}
-  }catch(e){console.error('stopOT error:',e);toast('초과근무 종료 오류: '+e.message);}
-}
-function updateOTUI(){
-  document.getElementById('otStart').style.display=otRunning?'none':'';
-  document.getElementById('otStop').style.display=otRunning?'':'none';
-}
-function startOTTimer(){
-  document.getElementById('otTimer').classList.add('running');
-  otInterval=setInterval(()=>{
-    const e=Math.floor((Date.now()-otStartTime)/1000),m=Math.floor(e/60),s=e%60;
-    document.getElementById('otTimer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
-  },1000);
-}
-function restoreTimers(){
-  const ps=localStorage.getItem('patrol_start');
-  if(ps){patrolStartTime=parseInt(ps);patrolType=localStorage.getItem('patrol_type')||'patrol';setPatrolType(patrolType);patrolRunning=true;updatePatrolUI();startPatrolTimer();}
-  const os=localStorage.getItem('ot_start');
-  if(os){otStartTime=parseInt(os);otPerson=localStorage.getItem('ot_person')||'';otRunning=true;updateOTUI();startOTTimer();}
+// ── 항목 수정 ──
+function editBoard(id){
+  const t=boardTimers[id];if(!t)return;
+  const newType=prompt('유형 수정:',t.type);
+  if(newType!==null&&newType.trim())t.type=newType.trim();
+  const newPersons=prompt('대상자 수정 (쉼표 구분):',t.persons);
+  if(newPersons!==null&&newPersons.trim())t.persons=newPersons.trim();
+  const newNote=prompt('메모 수정:',t.note||'');
+  if(newNote!==null)t.note=newNote;
+  saveBoardState();renderAllBoards();
+  toast('수정 완료');
 }
 
-async function deleteEvent(idx){
-  try{
-    if(!confirm('삭제할까요?'))return;
-    const backup=[...events];
-    events.splice(idx,1);
-    if(await saveEvents()){toast('삭제 완료');renderTimeline();}
-    else{events=backup;renderTimeline();}
-  }catch(e){console.error('deleteEvent error:',e);toast('삭제 오류: '+e.message);await loadEvents();}
-}
-
-async function addPerson(){
-  try{
-    const name=document.getElementById('newPersonName').value.trim();
-    if(!name){toast('이름을 입력하세요');return;}
-    personnel.push({name,rank:''});
-    document.getElementById('newPersonName').value='';
-    if(await savePersonnel()){toast(name+' 추가됨');renderPersonButtons();renderSettings();}
-    else{personnel.pop();renderSettings();}
-  }catch(e){console.error('addPerson error:',e);toast('인원 추가 오류: '+e.message);}
-}
-async function removePerson(idx){
-  try{
-    if(!confirm(personnel[idx].name+' 삭제할까요?'))return;
-    const name=personnel[idx].name;
-    const backup=[...personnel];
-    personnel.splice(idx,1);
-    if(await savePersonnel()){toast(name+' 삭제됨');renderPersonButtons();renderSettings();}
-    else{personnel=backup;renderSettings();}
-  }catch(e){console.error('removePerson error:',e);toast('인원 삭제 오류: '+e.message);}
-}
-async function addKeyPreset(){
-  try{
-    const name=document.getElementById('newKeyPreset').value.trim();
-    if(!name){toast('이름을 입력하세요');return;}
-    keyPresets.push(name);
-    document.getElementById('newKeyPreset').value='';
-    if(await savePersonnel()){toast(name+' 추가됨');renderKeyPresets();renderSettings();}
-    else{keyPresets.pop();renderSettings();}
-  }catch(e){console.error('addKeyPreset error:',e);toast('프리셋 추가 오류: '+e.message);}
-}
-async function removeKeyPreset(idx){
-  try{
-    const backup=[...keyPresets];
-    keyPresets.splice(idx,1);
-    if(await savePersonnel()){renderKeyPresets();renderSettings();}
-    else{keyPresets=backup;renderSettings();}
-  }catch(e){console.error('removeKeyPreset error:',e);toast('프리셋 삭제 오류: '+e.message);}
-}
-
-function syncToMaru(){toast('텔레그램에서 "동기화" 입력해주세요');}
-
-function toast(msg){
-  const el=document.getElementById('toast');el.textContent=msg;
-  el.classList.remove('show');void el.offsetWidth;el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),2000);
-}
+function syncToMaru(){toast('텔레그램에서 "동기화" 입력');}
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2000);}
 
 init();
 </script>
