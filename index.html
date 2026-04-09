@@ -461,21 +461,39 @@ function b64encode(str){
   return btoa(bin);
 }
 async function ghGet(path){
-  const r=await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path+'?ref='+BRANCH,{
-    headers:{'Authorization':'token '+TOKEN,'Accept':'application/vnd.github.v3+json'}
-  });
-  if(r.status===404)return null;
-  const d=await r.json();
-  return{content:JSON.parse(b64decode(d.content)),sha:d.sha};
+  try{
+    const r=await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path+'?ref='+BRANCH,{
+      headers:{'Authorization':'token '+TOKEN,'Accept':'application/vnd.github.v3+json'}
+    });
+    if(r.status===404)return null;
+    if(!r.ok){console.error('ghGet fail:',r.status,await r.text());return null;}
+    const d=await r.json();
+    return{content:JSON.parse(b64decode(d.content)),sha:d.sha};
+  }catch(e){console.error('ghGet error:',e);toast('GitHub 읽기 오류: '+e.message);return null;}
 }
 async function ghPut(path,content,sha,msg){
-  const body={message:msg,content:b64encode(JSON.stringify(content,null,2)),branch:BRANCH};
-  if(sha)body.sha=sha;
-  const r=await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path,{
-    method:'PUT',headers:{'Authorization':'token '+TOKEN,'Content-Type':'application/json'},
-    body:JSON.stringify(body)
-  });
-  return r.ok;
+  try{
+    const body={message:msg,content:b64encode(JSON.stringify(content,null,2)),branch:BRANCH};
+    if(sha)body.sha=sha;
+    const r=await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path,{
+      method:'PUT',headers:{'Authorization':'token '+TOKEN,'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    if(!r.ok){
+      const err=await r.text();
+      console.error('ghPut fail:',r.status,err);
+      if(r.status===409||r.status===422){
+        toast('SHA 충돌 - 새로고침 후 다시 시도');
+        await loadEvents();
+      }else if(r.status===403){
+        toast('토큰 권한 부족 (repo 권한 필요)');
+      }else{
+        toast('저장 실패: HTTP '+r.status);
+      }
+      return false;
+    }
+    return true;
+  }catch(e){console.error('ghPut error:',e);toast('GitHub 저장 오류: '+e.message);return false;}
 }
 
 async function loadEvents(){
@@ -492,13 +510,21 @@ async function loadPersonnel(){
   renderPersonButtons();renderKeyPresets();renderSettings();
 }
 async function saveEvents(){
-  const ok=await ghPut('events/'+today+'.json',{date:today,events:events},eventsSha,'update: '+today);
-  if(ok){const r=await ghGet('events/'+today+'.json');if(r)eventsSha=r.sha;}
-  return ok;
+  try{
+    const ok=await ghPut('events/'+today+'.json',{date:today,events:events},eventsSha,'update: '+today);
+    if(ok){
+      const r=await ghGet('events/'+today+'.json');
+      if(r)eventsSha=r.sha;
+    }
+    return ok;
+  }catch(e){console.error('saveEvents error:',e);toast('이벤트 저장 오류');return false;}
 }
 async function savePersonnel(){
-  const r=await ghGet('personnel.json');
-  return await ghPut('personnel.json',{personnel,key_presets:keyPresets},r?r.sha:null,'update personnel');
+  try{
+    const r=await ghGet('personnel.json');
+    const sha=r?r.sha:null;
+    return await ghPut('personnel.json',{personnel,key_presets:keyPresets},sha,'update personnel');
+  }catch(e){console.error('savePersonnel error:',e);toast('인원 저장 오류');return false;}
 }
 
 function renderTimeline(){
@@ -554,17 +580,23 @@ function selectKey(name){
 function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 
 async function addEntry(action){
-  if(!selectedPerson.entry){toast('대상자를 선택하세요');return;}
-  events.push({time:nowTime(),type:'entry',action,subject:selectedPerson.entry,note:document.getElementById('entryNote').value.trim()});
-  document.getElementById('entryNote').value='';
-  if(await saveEvents()){toast(selectedPerson.entry+' '+action+' 기록');renderTimeline();}
-  else{events.pop();toast('저장 실패');}
+  try{
+    if(!selectedPerson.entry){toast('대상자를 선택하세요');return;}
+    const ev={time:nowTime(),type:'entry',action,subject:selectedPerson.entry,note:document.getElementById('entryNote').value.trim()};
+    events.push(ev);
+    document.getElementById('entryNote').value='';
+    if(await saveEvents()){toast(selectedPerson.entry+' '+action+' 기록');renderTimeline();}
+    else{events.pop();}
+  }catch(e){console.error('addEntry error:',e);toast('출입 기록 오류: '+e.message);}
 }
 async function addKey(action){
-  if(!selectedPerson.key){toast('대상자를 선택하세요');return;}
-  events.push({time:nowTime(),type:'key',action,subject:selectedPerson.key,location:selectedKey||'',note:''});
-  if(await saveEvents()){toast('열쇠 '+(action==='issue'?'불출':'반납')+' - '+selectedPerson.key);renderTimeline();}
-  else{events.pop();toast('저장 실패');}
+  try{
+    if(!selectedPerson.key){toast('대상자를 선택하세요');return;}
+    const ev={time:nowTime(),type:'key',action,subject:selectedPerson.key,location:selectedKey||'',note:''};
+    events.push(ev);
+    if(await saveEvents()){toast('열쇠 '+(action==='issue'?'불출':'반납')+' - '+selectedPerson.key);renderTimeline();}
+    else{events.pop();}
+  }catch(e){console.error('addKey error:',e);toast('열쇠 기록 오류: '+e.message);}
 }
 
 function setPatrolType(type){
@@ -573,34 +605,42 @@ function setPatrolType(type){
   document.getElementById('cctvTypeBtn').classList.toggle('selected',type==='cctv');
 }
 async function startPatrol(){
-  events.push({time:nowTime(),type:patrolType,action:'start',note:document.getElementById('patrolNote').value.trim()});
-  if(await saveEvents()){
-    patrolRunning=true;patrolStartTime=Date.now();
-    localStorage.setItem('patrol_start',patrolStartTime);
-    localStorage.setItem('patrol_type',patrolType);
-    updatePatrolUI();startPatrolTimer();
-    toast((patrolType==='patrol'?'순찰':'CCTV 점검')+' 시작');renderTimeline();
-  }else{events.pop();toast('저장 실패');}
+  try{
+    const ev={time:nowTime(),type:patrolType,action:'start',note:document.getElementById('patrolNote').value.trim()};
+    events.push(ev);
+    if(await saveEvents()){
+      patrolRunning=true;patrolStartTime=Date.now();
+      localStorage.setItem('patrol_start',String(patrolStartTime));
+      localStorage.setItem('patrol_type',patrolType);
+      updatePatrolUI();startPatrolTimer();
+      toast((patrolType==='patrol'?'순찰':'CCTV 점검')+' 시작');renderTimeline();
+    }else{events.pop();}
+  }catch(e){console.error('startPatrol error:',e);toast('순찰 시작 오류: '+e.message);}
 }
 async function stopPatrol(){
-  events.push({time:nowTime(),type:patrolType,action:'stop',note:document.getElementById('patrolNote').value.trim()});
-  if(await saveEvents()){
-    patrolRunning=false;clearInterval(patrolInterval);
-    localStorage.removeItem('patrol_start');localStorage.removeItem('patrol_type');
-    updatePatrolUI();
-    document.getElementById('patrolTimer').textContent='00:00';
-    document.getElementById('patrolTimer').classList.remove('running');
-    document.getElementById('patrolNote').value='';
-    toast((patrolType==='patrol'?'순찰':'CCTV 점검')+' 종료');renderTimeline();
-  }else{events.pop();toast('저장 실패');}
+  try{
+    const ev={time:nowTime(),type:patrolType,action:'stop',note:document.getElementById('patrolNote').value.trim()};
+    events.push(ev);
+    if(await saveEvents()){
+      patrolRunning=false;clearInterval(patrolInterval);
+      localStorage.removeItem('patrol_start');localStorage.removeItem('patrol_type');
+      updatePatrolUI();
+      document.getElementById('patrolTimer').textContent='00:00';
+      document.getElementById('patrolTimer').classList.remove('running');
+      document.getElementById('patrolNote').value='';
+      toast((patrolType==='patrol'?'순찰':'CCTV 점검')+' 종료');renderTimeline();
+    }else{events.pop();}
+  }catch(e){console.error('stopPatrol error:',e);toast('순찰 종료 오류: '+e.message);}
 }
 async function abortPatrol(){
-  events.push({time:nowTime(),type:patrolType,action:'abort',note:'중단'});
-  await saveEvents();patrolRunning=false;clearInterval(patrolInterval);
-  localStorage.removeItem('patrol_start');localStorage.removeItem('patrol_type');
-  updatePatrolUI();document.getElementById('patrolTimer').textContent='00:00';
-  document.getElementById('patrolTimer').classList.remove('running');
-  toast('중단');renderTimeline();
+  try{
+    events.push({time:nowTime(),type:patrolType,action:'abort',note:'중단'});
+    await saveEvents();patrolRunning=false;clearInterval(patrolInterval);
+    localStorage.removeItem('patrol_start');localStorage.removeItem('patrol_type');
+    updatePatrolUI();document.getElementById('patrolTimer').textContent='00:00';
+    document.getElementById('patrolTimer').classList.remove('running');
+    toast('중단');renderTimeline();
+  }catch(e){console.error('abortPatrol error:',e);toast('중단 오류: '+e.message);}
 }
 function updatePatrolUI(){
   document.getElementById('patrolStart').style.display=patrolRunning?'none':'';
@@ -616,23 +656,29 @@ function startPatrolTimer(){
 }
 
 async function startOT(){
-  if(!selectedPerson.ot){toast('대상자를 선택하세요');return;}
-  events.push({time:nowTime(),type:'overtime',action:'start',subject:selectedPerson.ot,note:document.getElementById('otNote').value.trim()});
-  if(await saveEvents()){
-    otRunning=true;otStartTime=Date.now();otPerson=selectedPerson.ot;
-    localStorage.setItem('ot_start',otStartTime);localStorage.setItem('ot_person',otPerson);
-    updateOTUI();startOTTimer();toast('초과근무 시작 - '+otPerson);renderTimeline();
-  }else{events.pop();toast('저장 실패');}
+  try{
+    if(!selectedPerson.ot){toast('대상자를 선택하세요');return;}
+    const ev={time:nowTime(),type:'overtime',action:'start',subject:selectedPerson.ot,note:document.getElementById('otNote').value.trim()};
+    events.push(ev);
+    if(await saveEvents()){
+      otRunning=true;otStartTime=Date.now();otPerson=selectedPerson.ot;
+      localStorage.setItem('ot_start',String(otStartTime));localStorage.setItem('ot_person',otPerson);
+      updateOTUI();startOTTimer();toast('초과근무 시작 - '+otPerson);renderTimeline();
+    }else{events.pop();}
+  }catch(e){console.error('startOT error:',e);toast('초과근무 시작 오류: '+e.message);}
 }
 async function stopOT(){
-  events.push({time:nowTime(),type:'overtime',action:'stop',subject:otPerson||selectedPerson.ot||'',note:document.getElementById('otNote').value.trim()});
-  if(await saveEvents()){
-    otRunning=false;clearInterval(otInterval);
-    localStorage.removeItem('ot_start');localStorage.removeItem('ot_person');
-    updateOTUI();document.getElementById('otTimer').textContent='00:00';
-    document.getElementById('otTimer').classList.remove('running');
-    document.getElementById('otNote').value='';toast('초과근무 종료');renderTimeline();
-  }else{events.pop();toast('저장 실패');}
+  try{
+    const ev={time:nowTime(),type:'overtime',action:'stop',subject:otPerson||selectedPerson.ot||'',note:document.getElementById('otNote').value.trim()};
+    events.push(ev);
+    if(await saveEvents()){
+      otRunning=false;clearInterval(otInterval);
+      localStorage.removeItem('ot_start');localStorage.removeItem('ot_person');
+      updateOTUI();document.getElementById('otTimer').textContent='00:00';
+      document.getElementById('otTimer').classList.remove('running');
+      document.getElementById('otNote').value='';toast('초과근무 종료');renderTimeline();
+    }else{events.pop();}
+  }catch(e){console.error('stopOT error:',e);toast('초과근무 종료 오류: '+e.message);}
 }
 function updateOTUI(){
   document.getElementById('otStart').style.display=otRunning?'none':'';
@@ -653,31 +699,52 @@ function restoreTimers(){
 }
 
 async function deleteEvent(idx){
-  if(!confirm('삭제할까요?'))return;
-  events.splice(idx,1);
-  if(await saveEvents()){toast('삭제 완료');renderTimeline();}
-  else{toast('삭제 실패');loadEvents();}
+  try{
+    if(!confirm('삭제할까요?'))return;
+    const backup=[...events];
+    events.splice(idx,1);
+    if(await saveEvents()){toast('삭제 완료');renderTimeline();}
+    else{events=backup;renderTimeline();}
+  }catch(e){console.error('deleteEvent error:',e);toast('삭제 오류: '+e.message);await loadEvents();}
 }
 
 async function addPerson(){
-  const name=document.getElementById('newPersonName').value.trim();
-  if(!name)return;personnel.push({name,rank:''});
-  document.getElementById('newPersonName').value='';
-  if(await savePersonnel()){toast(name+' 추가');renderPersonButtons();renderSettings();}
+  try{
+    const name=document.getElementById('newPersonName').value.trim();
+    if(!name){toast('이름을 입력하세요');return;}
+    personnel.push({name,rank:''});
+    document.getElementById('newPersonName').value='';
+    if(await savePersonnel()){toast(name+' 추가됨');renderPersonButtons();renderSettings();}
+    else{personnel.pop();renderSettings();}
+  }catch(e){console.error('addPerson error:',e);toast('인원 추가 오류: '+e.message);}
 }
 async function removePerson(idx){
-  const name=personnel[idx].name;personnel.splice(idx,1);
-  if(await savePersonnel()){toast(name+' 삭제');renderPersonButtons();renderSettings();}
+  try{
+    if(!confirm(personnel[idx].name+' 삭제할까요?'))return;
+    const name=personnel[idx].name;
+    const backup=[...personnel];
+    personnel.splice(idx,1);
+    if(await savePersonnel()){toast(name+' 삭제됨');renderPersonButtons();renderSettings();}
+    else{personnel=backup;renderSettings();}
+  }catch(e){console.error('removePerson error:',e);toast('인원 삭제 오류: '+e.message);}
 }
 async function addKeyPreset(){
-  const name=document.getElementById('newKeyPreset').value.trim();
-  if(!name)return;keyPresets.push(name);
-  document.getElementById('newKeyPreset').value='';
-  if(await savePersonnel()){toast(name+' 추가');renderKeyPresets();renderSettings();}
+  try{
+    const name=document.getElementById('newKeyPreset').value.trim();
+    if(!name){toast('이름을 입력하세요');return;}
+    keyPresets.push(name);
+    document.getElementById('newKeyPreset').value='';
+    if(await savePersonnel()){toast(name+' 추가됨');renderKeyPresets();renderSettings();}
+    else{keyPresets.pop();renderSettings();}
+  }catch(e){console.error('addKeyPreset error:',e);toast('프리셋 추가 오류: '+e.message);}
 }
 async function removeKeyPreset(idx){
-  keyPresets.splice(idx,1);
-  if(await savePersonnel()){renderKeyPresets();renderSettings();}
+  try{
+    const backup=[...keyPresets];
+    keyPresets.splice(idx,1);
+    if(await savePersonnel()){renderKeyPresets();renderSettings();}
+    else{keyPresets=backup;renderSettings();}
+  }catch(e){console.error('removeKeyPreset error:',e);toast('프리셋 삭제 오류: '+e.message);}
 }
 
 function syncToMaru(){toast('텔레그램에서 "동기화" 입력해주세요');}
