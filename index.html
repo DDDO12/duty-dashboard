@@ -543,18 +543,18 @@ function createEntry(){
 function createPatrol(){
   if(!selectedPatrolPersons.size){toast('대상자를 선택하세요');return;}
   const names=[...selectedPatrolPersons].join(', ');
-  const ev={time:nowTime(),type:'patrol',action:'시작',subject:names};
+  const ev={time:nowTime(),type:'patrol',action:'start',subject:names};
   events.push(ev);
-  saveEvents().then(ok=>{if(ok){toast(names+' 순찰 시작');renderTimeline();}});
+  saveEvents().then(ok=>{if(ok){toast(names+' 순찰 시작');renderTimeline();}else{events.pop();toast('저장 실패. 다시 시도해주세요.');}});
   createBoardTimer('patrol','순찰',names,'');
   selectedPatrolPersons.clear();renderPersonChips('patrol');renderAllBoards();
 }
 function createCCTV(){
   if(!selectedCctvPersons.size){toast('대상자를 선택하세요');return;}
   const names=[...selectedCctvPersons].join(', ');
-  const ev={time:nowTime(),type:'cctv',action:'시작',subject:names};
+  const ev={time:nowTime(),type:'cctv',action:'start',subject:names};
   events.push(ev);
-  saveEvents().then(ok=>{if(ok){toast(names+' CCTV 점검 시작');renderTimeline();}});
+  saveEvents().then(ok=>{if(ok){toast(names+' CCTV 점검 시작');renderTimeline();}else{events.pop();toast('저장 실패. 다시 시도해주세요.');}});
   createBoardTimer('cctv','CCTV',names,'');
   selectedCctvPersons.clear();renderPersonChips('cctv');renderAllBoards();
 }
@@ -562,9 +562,9 @@ function createOT(){
   if(!selectedOtPersons.size){toast('대상자를 선택하세요');return;}
   const names=[...selectedOtPersons].join(', ');
   const note=document.getElementById('otNote').value.trim();
-  const ev={time:nowTime(),type:'overtime',action:'시작',subject:names,note};
+  const ev={time:nowTime(),type:'overtime',action:'start',subject:names,note};
   events.push(ev);
-  saveEvents().then(ok=>{if(ok){toast(names+' 초과근무 시작');renderTimeline();}});
+  saveEvents().then(ok=>{if(ok){toast(names+' 초과근무 시작');renderTimeline();}else{events.pop();toast('저장 실패. 다시 시도해주세요.');}});
   createBoardTimer('overtime','초과근무',names,note);
   document.getElementById('otNote').value='';
   selectedOtPersons.clear();renderPersonChips('ot');renderAllBoards();
@@ -651,7 +651,7 @@ function stopBoard(id){
   const dur=fmtTime(t.elapsed);
   // 종료 이벤트
   const evType=t.category==='cctv'?'cctv':t.category;
-  const ev={time:nowTime(),type:evType,action:'종료',subject:t.persons,location:t.type,duration:dur,note:t.note||''};
+  const ev={time:nowTime(),type:evType,action:'stop',subject:t.persons,location:t.type,duration:dur,note:t.note||''};
   events.push(ev);
   saveEvents().then(ok=>{if(ok){toast(t.persons+' '+t.type+' 종료 ('+dur+')');renderTimeline();}});
   saveBoardState();renderAllBoards();
@@ -707,7 +707,7 @@ function selectKey(name){selectedKey=selectedKey===name?null:name;document.query
 async function addKey(action){
   if(!selectedPerson.key){toast('대상자를 선택하세요');return;}
   events.push({time:nowTime(),type:'key',action,subject:selectedPerson.key,location:selectedKey||''});
-  if(await saveEvents()){toast('열쇠 '+(action==='issue'?'수령':'반납'));renderTimeline();renderKeyBoard();}else events.pop();
+  if(await saveEvents()){toast('열쇠 '+(action==='issue'?'수령':'반납'));renderTimeline();renderKeyBoard();}else{events.pop();toast('저장 실패. 다시 시도해주세요.');}
 }
 function renderKeyBoard(){
   const board=document.getElementById('keyBoard');if(!board)return;
@@ -739,7 +739,7 @@ async function returnKey(subject,location){
 }
 
 // ── 삭제/추가 ──
-async function deleteEvent(idx){if(!confirm('삭제할까요?'))return;const bk=[...events];events.splice(idx,1);if(await saveEvents()){toast('삭제');renderTimeline();}else{events=bk;renderTimeline();}}
+async function deleteEvent(idx){if(!confirm('삭제할까요?'))return;const bk=[...events];events.splice(idx,1);if(await saveEvents()){toast('삭제');renderTimeline();}else{events=bk;toast('저장 실패. 다시 시도해주세요.');renderTimeline();}}
 async function addPerson(){const n=document.getElementById('newPersonName').value.trim();if(!n)return;personnel.push({name:n});document.getElementById('newPersonName').value='';if(await savePersonnel()){toast(n+' 추가');renderPersonButtons();renderSettings();renderEntryForm();}else personnel.pop();}
 async function removePerson(i){if(!confirm(personnel[i].name+' 삭제?'))return;const bk=[...personnel];personnel.splice(i,1);if(await savePersonnel()){renderPersonButtons();renderSettings();renderEntryForm();}else personnel=bk;}
 async function addKeyPreset(){const n=document.getElementById('newKeyPreset').value.trim();if(!n)return;keyPresets.push(n);document.getElementById('newKeyPreset').value='';if(await savePersonnel()){renderKeyPresets();renderSettings();}else keyPresets.pop();}
