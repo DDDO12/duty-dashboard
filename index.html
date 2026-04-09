@@ -56,7 +56,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
 .stat-badge{background:#e8f0fe;color:#1967d2;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;}
 
 /* Timeline */
-.timeline-item{display:flex;align-items:center;padding:14px 0;border-bottom:1px solid #f0f0f0;}
+.timeline-item{display:flex;align-items:flex-start;padding:14px 0;border-bottom:1px solid #f0f0f0;}
 .timeline-time{font-size:14px;color:#1a73e8;font-weight:600;min-width:50px;}
 .timeline-tag{font-size:11px;padding:3px 8px;border-radius:12px;margin:0 10px;min-width:44px;text-align:center;font-weight:700;}
 .tag-entry{background:#e6f4ea;color:#137333;}
@@ -70,10 +70,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
 
 /* ===== 출입 게시판형 ===== */
 .entry-board{margin-top:8px;}
-.entry-row{background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);display:flex;align-items:center;gap:10px;}
+.entry-row{background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);display:flex;align-items:flex-start;gap:10px;}
 .entry-row.done{opacity:0.6;}
-.entry-type{font-size:13px;font-weight:700;color:#fff;background:#1a73e8;padding:4px 10px;border-radius:8px;min-width:52px;text-align:center;}
-.entry-persons{font-size:14px;font-weight:500;flex:1;color:#333;}
+.entry-type{font-size:13px;font-weight:700;color:#fff;background:#1a73e8;padding:4px 10px;border-radius:8px;min-width:52px;text-align:center;flex-shrink:0;}
+.entry-persons{font-size:14px;font-weight:500;flex:1;min-width:0;color:#333;word-break:break-all;overflow-wrap:break-word;}
 .entry-timer{font-size:16px;font-weight:700;min-width:56px;text-align:center;font-variant-numeric:tabular-nums;color:#666;}
 .entry-timer.running{color:#34a853;}
 .entry-actions{display:flex;gap:6px;}
@@ -124,10 +124,13 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
 .note-input:focus{outline:none;border-color:#1a73e8;background:#fff;}
 
 /* Settings */
-.setting-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f0f0f0;}
-.setting-item span{font-size:15px;}
-.setting-del{color:#ea4335;font-size:13px;font-weight:600;cursor:pointer;padding:4px 12px;border-radius:16px;}
+.setting-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0;}
+.setting-item span{font-size:15px;flex:1;}
+.setting-del{color:#ea4335;font-size:13px;font-weight:600;cursor:pointer;padding:4px 12px;border-radius:16px;flex-shrink:0;}
 .setting-del:active{background:#fce8e6;}
+.setting-order{display:flex;flex-direction:column;gap:2px;margin-right:6px;flex-shrink:0;}
+.setting-order button{background:none;border:none;padding:0;cursor:pointer;line-height:1;color:#999;font-size:16px;}
+.setting-order button:active{color:#1a73e8;}
 .add-row{display:flex;gap:8px;margin-top:12px;}
 .add-row input{flex:1;padding:10px 14px;border:1px solid #e0e0e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';}
 .add-row input:focus{outline:none;border-color:#1a73e8;background:#fff;}
@@ -677,11 +680,28 @@ function renderKeyPresets(){
   const el=document.getElementById('keyPresets');if(!el)return;
   el.innerHTML=keyPresets.map(k=>'<div class="preset-btn" onclick="selectKey(\''+k+'\')" id="kp-'+k+'">'+k+'</div>').join('');
 }
+function orderBtns(up,dn){return '<div class="setting-order"><button onclick="'+up+'">▲</button><button onclick="'+dn+'">▼</button></div>';}
 function renderSettings(){
-  document.getElementById('personnelList').innerHTML=personnel.map((p,i)=>'<div class="setting-item"><span>'+p.name+'</span><span class="setting-del" onclick="removePerson('+i+')">삭제</span></div>').join('');
-  document.getElementById('keyPresetList').innerHTML=keyPresets.map((k,i)=>'<div class="setting-item"><span>'+k+'</span><span class="setting-del" onclick="removeKeyPreset('+i+')">삭제</span></div>').join('');
-  document.getElementById('entryTypeList').innerHTML=entryTypes.map((t,i)=>'<div class="setting-item"><span>'+t+'</span><span class="setting-del" onclick="removeEntryType('+i+')">삭제</span></div>').join('');
-  document.getElementById('personnel2List').innerHTML=personnel2.map((p,i)=>'<div class="setting-item"><span>'+p.name+'</span><span class="setting-del" onclick="removePerson2('+i+')">삭제</span></div>').join('');
+  const n=personnel.length;
+  document.getElementById('personnelList').innerHTML=personnel.map((p,i)=>
+    '<div class="setting-item">'+orderBtns('moveItem(personnel,'+i+',-1,\'p1\')','moveItem(personnel,'+i+',1,\'p1\')')+'<span>'+p.name+'</span><span class="setting-del" onclick="removePerson('+i+')">삭제</span></div>').join('');
+  const n2=keyPresets.length;
+  document.getElementById('keyPresetList').innerHTML=keyPresets.map((k,i)=>
+    '<div class="setting-item">'+orderBtns('moveItem(keyPresets,'+i+',-1,\'kp\')','moveItem(keyPresets,'+i+',1,\'kp\')')+'<span>'+k+'</span><span class="setting-del" onclick="removeKeyPreset('+i+')">삭제</span></div>').join('');
+  const n3=entryTypes.length;
+  document.getElementById('entryTypeList').innerHTML=entryTypes.map((t,i)=>
+    '<div class="setting-item">'+orderBtns('moveItem(entryTypes,'+i+',-1,\'et\')','moveItem(entryTypes,'+i+',1,\'et\')')+'<span>'+t+'</span><span class="setting-del" onclick="removeEntryType('+i+')">삭제</span></div>').join('');
+  const n4=personnel2.length;
+  document.getElementById('personnel2List').innerHTML=personnel2.map((p,i)=>
+    '<div class="setting-item">'+orderBtns('moveItem(personnel2,'+i+',-1,\'p2\')','moveItem(personnel2,'+i+',1,\'p2\')')+'<span>'+p.name+'</span><span class="setting-del" onclick="removePerson2('+i+')">삭제</span></div>').join('');
+}
+function moveItem(arr,i,dir,tag){
+  const j=i+dir;if(j<0||j>=arr.length)return;
+  [arr[i],arr[j]]=[arr[j],arr[i]];
+  savePersonnel();renderSettings();
+  if(tag==='p1'||tag==='p2')_refreshPersonViews();
+  if(tag==='et')renderEntryForm();
+  if(tag==='kp'){renderKeyPresets();renderPersonButtons();}
 }
 
 function selectPerson(ctx,name){
