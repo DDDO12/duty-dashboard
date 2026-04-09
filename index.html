@@ -189,8 +189,18 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
       <div id="entryAddBody" style="display:none;margin-top:12px;">
         <div class="card-title">유형 선택</div>
         <div class="type-selector" id="entryTypes"></div>
-        <div class="card-title" style="margin-top:12px;">대상자 선택 (복수 가능)</div>
-        <div class="person-selector" id="entryPersonChips"></div>
+        <div class="card-title" style="margin-top:12px;">액션 선택</div>
+        <div class="type-selector" id="entryActionChips"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+          <div>
+            <div class="card-title">대상자 1</div>
+            <div class="person-selector" id="entryPersonChips1" style="flex-direction:column;"></div>
+          </div>
+          <div>
+            <div class="card-title">대상자 2</div>
+            <div class="person-selector" id="entryPersonChips2" style="flex-direction:column;"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="card-title" style="padding:0 4px;">진행 중인 출입</div>
@@ -318,7 +328,8 @@ let viewDate=new Date().toISOString().split('T')[0];
 let events=[],personnel=[],keyPresets=['탄약고','정문','후문','무기고'];
 let entryTypes=['탄약고','무기고','BL탄약고','교탄탄약고','간이탄약고'];
 let selectedPerson={key:null},selectedKey=null;
-let selectedEntryType=null, selectedEntryPersons=new Set();
+let selectedEntryType=null, selectedEntryAction='입장', selectedEntryPerson1=null, selectedEntryPerson2=null;
+const ENTRY_ACTIONS=['입장','퇴장','외출','복귀'];
 let selectedPatrolPersons=new Set(), selectedCctvPersons=new Set(), selectedOtPersons=new Set();
 // 게시판 타이머 (entry/patrol/cctv/overtime 통합)
 let boardTimers={}; // id -> {interval, startTime, paused, elapsed, category, type, persons, done, note}
@@ -436,7 +447,7 @@ function renderTimeline(){
   list.innerHTML=sorted.map((ev,i)=>{
     const tc='tag-'+ev.type,tg=lb[ev.type]||ev.type;
     let d='';
-    if(ev.type==='entry')d=(ev.subject||'')+' '+(ev.action||'')+' '+(ev.location||'');
+    if(ev.type==='entry'){const sub=(ev.subject||'')+(ev.subject2?' / '+ev.subject2:'');d=sub+' '+(ev.action||'')+' '+(ev.location||'');}
     else if(ev.type==='patrol'||ev.type==='cctv')d=ev.action==='start'?'시작':ev.action==='stop'?'종료':'중단';
     else if(ev.type==='key')d=(ev.action==='issue'?'수령':'반납')+' '+(ev.subject||'')+' '+(ev.location||'');
     else if(ev.type==='overtime')d=(ev.action==='start'?'시작':'종료')+' '+(ev.subject||'');
@@ -450,38 +461,39 @@ function renderTimeline(){
 // ── 출입 게시판형 ──
 function renderEntryForm(){
   // 유형 칩
-  const tc=document.getElementById('entryTypes');
-  tc.innerHTML=entryTypes.map(t=>'<div class="type-chip'+(selectedEntryType===t?' selected':'')+'" onclick="toggleEntryType(\''+t+'\')">'+t+'</div>').join('');
-  // 대상자 칩
-  const pc=document.getElementById('entryPersonChips');
-  pc.innerHTML=personnel.map(p=>'<div class="person-chip'+(selectedEntryPersons.has(p.name)?' selected':'')+'" onclick="toggleEntryPerson(\''+p.name+'\')">'+p.name+'</div>').join('');
+  document.getElementById('entryTypes').innerHTML=entryTypes.map(t=>'<div class="type-chip'+(selectedEntryType===t?' selected':'')+'" onclick="toggleEntryType(\''+t+'\')">'+t+'</div>').join('');
+  // 액션 칩
+  document.getElementById('entryActionChips').innerHTML=ENTRY_ACTIONS.map(a=>'<div class="type-chip'+(selectedEntryAction===a?' selected':'')+'" onclick="selectEntryAction(\''+a+'\')">'+a+'</div>').join('');
+  // 대상자1 칩
+  document.getElementById('entryPersonChips1').innerHTML=personnel.map(p=>'<div class="person-chip'+(selectedEntryPerson1===p.name?' selected':'')+'" onclick="selectEntryPerson(1,\''+p.name+'\')">'+p.name+'</div>').join('');
+  // 대상자2 칩
+  document.getElementById('entryPersonChips2').innerHTML=personnel.map(p=>'<div class="person-chip'+(selectedEntryPerson2===p.name?' selected':'')+'" onclick="selectEntryPerson(2,\''+p.name+'\')">'+p.name+'</div>').join('');
 }
 function toggleEntryType(t){selectedEntryType=selectedEntryType===t?null:t;renderEntryForm();}
+function selectEntryAction(a){selectedEntryAction=a;renderEntryForm();}
 let _entryAutoTimer=null;
-function toggleEntryPerson(n){
-  if(selectedEntryPersons.has(n))selectedEntryPersons.delete(n);else selectedEntryPersons.add(n);
+function selectEntryPerson(slot,n){
+  if(slot===1){selectedEntryPerson1=selectedEntryPerson1===n?null:n;}
+  else{selectedEntryPerson2=selectedEntryPerson2===n?null:n;}
   renderEntryForm();
-  // 유형 + 대상자 둘 다 있으면 1.5초 후 자동 등록 (복수 선택 시간 확보)
+  // 유형 + 대상자1 있으면 1.5초 후 자동 등록
   clearTimeout(_entryAutoTimer);
-  if(selectedEntryType && selectedEntryPersons.size){
+  if(selectedEntryType && selectedEntryPerson1){
     _entryAutoTimer=setTimeout(()=>{
-      if(selectedEntryType && selectedEntryPersons.size){
-        createEntry();
-        toggleAddForm('entry');
-      }
+      if(selectedEntryType && selectedEntryPerson1){createEntry();toggleAddForm('entry');}
     },1500);
   }
 }
 
 function createEntry(){
   if(!selectedEntryType){toast('유형을 선택하세요');return;}
-  if(!selectedEntryPersons.size){toast('대상자를 선택하세요');return;}
-  const names=[...selectedEntryPersons].join(', ');
-  const ev={time:nowTime(),type:'entry',action:'입장',subject:names,location:selectedEntryType};
+  if(!selectedEntryPerson1){toast('대상자 1을 선택하세요');return;}
+  const subject=selectedEntryPerson1+(selectedEntryPerson2?' / '+selectedEntryPerson2:'');
+  const ev={time:nowTime(),type:'entry',action:selectedEntryAction,subject:selectedEntryPerson1,subject2:selectedEntryPerson2||'',location:selectedEntryType};
   events.push(ev);
-  saveEvents().then(ok=>{if(ok){toast(names+' '+selectedEntryType+' 입장');renderTimeline();}});
-  createBoardTimer('entry',selectedEntryType,names,'');
-  selectedEntryPersons.clear();selectedEntryType=null;renderEntryForm();renderAllBoards();
+  saveEvents().then(ok=>{if(ok){toast(subject+' '+selectedEntryType+' '+selectedEntryAction);renderTimeline();}});
+  createBoardTimer('entry',selectedEntryType,subject,'');
+  selectedEntryPerson1=null;selectedEntryPerson2=null;selectedEntryType=null;renderEntryForm();renderAllBoards();
 }
 function createPatrol(){
   if(!selectedPatrolPersons.size){toast('대상자를 선택하세요');return;}
@@ -683,8 +695,9 @@ async function returnKey(subject,location){
 
 // ── 삭제/추가 ──
 async function deleteEvent(idx){if(!confirm('삭제할까요?'))return;const bk=[...events];events.splice(idx,1);if(await saveEvents()){toast('삭제');renderTimeline();}else{events=bk;toast('저장 실패. 다시 시도해주세요.');renderTimeline();}}
-async function addPerson(){const n=document.getElementById('newPersonName').value.trim();if(!n)return;personnel.push({name:n});document.getElementById('newPersonName').value='';if(await savePersonnel()){toast(n+' 추가');renderPersonButtons();renderSettings();renderEntryForm();}else{personnel.pop();document.getElementById('newPersonName').value=n;toast('저장 실패. 토큰을 확인해주세요.');}}
-async function removePerson(i){if(!confirm(personnel[i].name+' 삭제?'))return;const bk=[...personnel];personnel.splice(i,1);if(await savePersonnel()){renderPersonButtons();renderSettings();renderEntryForm();}else{personnel=bk;toast('저장 실패. 토큰을 확인해주세요.');renderSettings();}}
+function _refreshPersonViews(){renderPersonButtons();renderSettings();renderEntryForm();renderPersonChips('patrol');renderPersonChips('cctv');renderPersonChips('ot');}
+async function addPerson(){const n=document.getElementById('newPersonName').value.trim();if(!n)return;personnel.push({name:n});document.getElementById('newPersonName').value='';if(await savePersonnel()){toast(n+' 추가');_refreshPersonViews();}else{personnel.pop();document.getElementById('newPersonName').value=n;toast('저장 실패.');}}
+async function removePerson(i){if(!confirm(personnel[i].name+' 삭제?'))return;const bk=[...personnel];personnel.splice(i,1);if(await savePersonnel()){_refreshPersonViews();}else{personnel=bk;toast('저장 실패.');renderSettings();}}
 async function addKeyPreset(){const n=document.getElementById('newKeyPreset').value.trim();if(!n)return;keyPresets.push(n);document.getElementById('newKeyPreset').value='';if(await savePersonnel()){renderKeyPresets();renderSettings();}else{keyPresets.pop();document.getElementById('newKeyPreset').value=n;toast('저장 실패. 토큰을 확인해주세요.');}}
 async function removeKeyPreset(i){const bk=[...keyPresets];keyPresets.splice(i,1);if(await savePersonnel()){renderKeyPresets();renderSettings();}else{keyPresets=bk;toast('저장 실패. 토큰을 확인해주세요.');renderSettings();}}
 async function addEntryType(){const n=document.getElementById('newEntryType').value.trim();if(!n)return;entryTypes.push(n);document.getElementById('newEntryType').value='';if(await savePersonnel()){renderSettings();renderEntryForm();}else{entryTypes.pop();document.getElementById('newEntryType').value=n;toast('저장 실패. 토큰을 확인해주세요.');}}
