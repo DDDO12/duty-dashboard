@@ -257,7 +257,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
         <span class="material-icons-round" id="keyToggleIcon" style="color:#f9ab00;font-size:20px;">expand_more</span>
       </div>
       <div id="keyAddBody" style="display:none;margin-top:12px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
           <div>
             <div class="card-title">대상자 1</div>
             <div class="person-grid" id="keyPersons1" style="margin-top:8px;"></div>
@@ -265,6 +265,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
           <div>
             <div class="card-title">대상자 2</div>
             <div class="person-grid" id="keyPersons2" style="margin-top:8px;"></div>
+          </div>
+          <div>
+            <div class="card-title">대상자 3</div>
+            <div class="person-grid" id="keyPersons3" style="margin-top:8px;"></div>
           </div>
         </div>
         <div class="card-title">열쇠 선택</div>
@@ -318,6 +322,16 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
       </div>
     </div>
     <div class="entry-add-card" style="margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s3k')">
+        <span class="card-title" style="margin:0;">인원 관리 (열쇠 대상자 3)</span>
+        <span class="material-icons-round" id="s3k-icon" style="color:#f9ab00;font-size:20px;">expand_more</span>
+      </div>
+      <div id="s3k-body" style="display:none;margin-top:12px;">
+        <div id="personnel3List"></div>
+        <div class="add-row"><input id="newPerson3Name" placeholder="이름 입력"><button style="background:#f9ab00;" onclick="addPerson3()">추가</button></div>
+      </div>
+    </div>
+    <div class="entry-add-card" style="margin-top:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s3')">
         <span class="card-title" style="margin:0;">출입 유형 관리</span>
         <span class="material-icons-round" id="s3-icon" style="color:#1a73e8;font-size:20px;">expand_more</span>
@@ -368,9 +382,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
 <script>
 function todayLocal(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 let viewDate=todayLocal();
-let events=[],personnel=[],personnel2=[],keyPresets=['탄약고','정문','후문','무기고'];
+let events=[],personnel=[],personnel2=[],personnel3=[],keyPresets=['탄약고','정문','후문','무기고'];
 let entryTypes=['탄약고','무기고','BL탄약고','교탄탄약고','간이탄약고'];
-let selectedPerson={key1:new Set(),key2:new Set()},selectedKey=null;
+let selectedPerson={key1:new Set(),key2:new Set(),key3:new Set()},selectedKey=null;
 let selectedEntryType=null, selectedEntryAction='입장';
 let selectedEntryPerson1=new Set(), selectedEntryPerson2=new Set();
 const ENTRY_ACTIONS=['입장','퇴장','외출','복귀'];
@@ -464,7 +478,7 @@ function loadEvents(){
 }
 function loadPersonnel(){
   const data=localStorage.getItem('personnel');
-  if(data){const d=JSON.parse(data);personnel=d.personnel||[];personnel2=d.personnel2||[];if(d.key_presets)keyPresets=d.key_presets;if(d.entry_types)entryTypes=d.entry_types;}
+  if(data){const d=JSON.parse(data);personnel=d.personnel||[];personnel2=d.personnel2||[];personnel3=d.personnel3||[];if(d.key_presets)keyPresets=d.key_presets;if(d.entry_types)entryTypes=d.entry_types;}
   renderPersonButtons();renderKeyPresets();renderSettings();renderEntryForm();
   renderPersonChips('patrol');renderPersonChips('cctv');renderPersonChips('ot');
 }
@@ -474,7 +488,7 @@ function saveEvents(){
   return Promise.resolve(true);
 }
 function savePersonnel(){
-  localStorage.setItem('personnel',JSON.stringify({personnel,personnel2,key_presets:keyPresets,entry_types:entryTypes}));
+  localStorage.setItem('personnel',JSON.stringify({personnel,personnel2,personnel3,key_presets:keyPresets,entry_types:entryTypes}));
   return Promise.resolve(true);
 }
 
@@ -492,7 +506,7 @@ function renderTimeline(){
     let d='';
     if(ev.type==='entry'){const sub=(ev.subject||'')+(ev.subject2?' / '+ev.subject2:'');d=sub+' '+(ev.action||'')+' '+(ev.location||'');}
     else if(ev.type==='patrol'||ev.type==='cctv')d=ev.action==='start'?'시작':ev.action==='stop'?'종료':'중단';
-    else if(ev.type==='key'){const ks=(ev.subject||'')+(ev.subject2?' / '+ev.subject2:'');d=(ev.action==='issue'?'수령':'반납')+' '+ks+' '+(ev.location||'');}
+    else if(ev.type==='key'){const ks=[ev.subject,ev.subject2,ev.subject3].filter(Boolean).join(' / ');d=(ev.action==='issue'?'수령':'반납')+' '+ks+' '+(ev.location||'');}
     else if(ev.type==='overtime')d=(ev.action==='start'?'시작':'종료')+' '+(ev.subject||'');
     if(ev.note)d+=' ('+ev.note+')';
     if(ev.duration)d+=' ['+ev.duration+']';
@@ -679,10 +693,10 @@ function restoreAllTimers(){
 // ── 공통 함수 ──
 function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 function renderPersonButtons(){
-  const el1=document.getElementById('keyPersons1');const el2=document.getElementById('keyPersons2');
-  if(!el1||!el2)return;
-  el1.innerHTML=personnel.map(p=>'<div class="person-btn'+(selectedPerson.key1.has(p.name)?' selected':'')+'" onclick="selectKeyPerson(1,\''+p.name+'\')">'+p.name+'</div>').join('');
-  el2.innerHTML=personnel2.map(p=>'<div class="person-btn'+(selectedPerson.key2.has(p.name)?' selected':'')+'" onclick="selectKeyPerson(2,\''+p.name+'\')">'+p.name+'</div>').join('');
+  const el1=document.getElementById('keyPersons1');const el2=document.getElementById('keyPersons2');const el3=document.getElementById('keyPersons3');
+  if(el1)el1.innerHTML=personnel.map(p=>'<div class="person-btn'+(selectedPerson.key1.has(p.name)?' selected':'')+'" onclick="selectKeyPerson(1,\''+p.name+'\')">'+p.name+'</div>').join('');
+  if(el2)el2.innerHTML=personnel2.map(p=>'<div class="person-btn'+(selectedPerson.key2.has(p.name)?' selected':'')+'" onclick="selectKeyPerson(2,\''+p.name+'\')">'+p.name+'</div>').join('');
+  if(el3)el3.innerHTML=personnel3.map(p=>'<div class="person-btn'+(selectedPerson.key3.has(p.name)?' selected':'')+'" onclick="selectKeyPerson(3,\''+p.name+'\')">'+p.name+'</div>').join('');
 }
 function renderKeyPresets(){
   const el=document.getElementById('keyPresets');if(!el)return;
@@ -703,6 +717,7 @@ function renderSettings(){
   renderSettingList('keyPresetList',keyPresets,k=>k,'removeKeyPreset','kp');
   renderSettingList('entryTypeList',entryTypes,t=>t,'removeEntryType','et');
   renderSettingList('personnel2List',personnel2,p=>p.name,'removePerson2','p2');
+  renderSettingList('personnel3List',personnel3,p=>p.name,'removePerson3','p3');
 }
 function setupSettingDrag(container, arr, tag){
   let dragIdx=null, overIdx=null;
@@ -711,7 +726,7 @@ function setupSettingDrag(container, arr, tag){
     if(dragIdx===null||overIdx===null||dragIdx===overIdx)return;
     const moved=arr.splice(dragIdx,1)[0];arr.splice(overIdx,0,moved);
     savePersonnel();renderSettings();
-    if(tag==='p1'||tag==='p2')_refreshPersonViews();
+    if(tag==='p1'||tag==='p2'||tag==='p3')_refreshPersonViews();
     if(tag==='et')renderEntryForm();
     if(tag==='kp'){renderKeyPresets();renderPersonButtons();}
     dragIdx=overIdx=null;
@@ -761,7 +776,7 @@ function selectPerson(ctx,name){
   document.querySelectorAll('#'+(ctx==='ot'?'otPersons':ctx+'Persons')+' .person-btn').forEach(b=>{b.classList.toggle('selected',b.textContent===selectedPerson[ctx]);});
 }
 function selectKeyPerson(slot,name){
-  const s=slot===1?selectedPerson.key1:selectedPerson.key2;
+  const s=slot===1?selectedPerson.key1:slot===2?selectedPerson.key2:selectedPerson.key3;
   if(s.has(name))s.delete(name);else s.add(name);
   renderPersonButtons();
 }
@@ -769,14 +784,15 @@ function selectKey(name){selectedKey=selectedKey===name?null:name;document.query
 
 // ── 열쇠 ──
 async function addKey(action){
-  if(!selectedPerson.key1.size){toast('대상자 1을 선택하세요');return;}
+  if(!selectedPerson.key1.size&&!selectedPerson.key2.size&&!selectedPerson.key3.size){toast('대상자를 선택하세요');return;}
   const subject=[...selectedPerson.key1].join(', ');
   const subject2=[...selectedPerson.key2].join(', ');
-  events.push({time:nowTime(),type:'key',action,subject,subject2,location:selectedKey||''});
-  const label=subject+(subject2?' / '+subject2:'');
+  const subject3=[...selectedPerson.key3].join(', ');
+  events.push({time:nowTime(),type:'key',action,subject,subject2,subject3,location:selectedKey||''});
+  const label=[subject,subject2,subject3].filter(Boolean).join(' / ');
   if(await saveEvents()){toast('열쇠 '+(action==='issue'?'수령':'반납')+' '+label);renderTimeline();renderKeyBoard();}
   else{events.pop();toast('저장 실패. 다시 시도해주세요.');}
-  selectedPerson.key1.clear();selectedPerson.key2.clear();renderPersonButtons();
+  selectedPerson.key1.clear();selectedPerson.key2.clear();selectedPerson.key3.clear();renderPersonButtons();
 }
 function renderKeyBoard(){
   const board=document.getElementById('keyBoard');if(!board)return;
@@ -795,7 +811,7 @@ function renderKeyBoard(){
   });
   const sorted=[...issued].sort((a,b)=>(a.matched?1:0)-(b.matched?1:0)||b.time.localeCompare(a.time));
   board.innerHTML=sorted.map(is=>{
-    const label=is.subject+(is.subject2?' / '+is.subject2:'');
+    const label=[is.subject,is.subject2,is.subject3].filter(Boolean).join(' / ');
     const delBtn='<button style="background:#ea4335;border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:6px;flex-shrink:0;" onclick="deleteKeyEvent('+events.indexOf(is)+')"><span class="material-icons-round" style="font-size:16px;color:#fff;">delete</span></button>';
     if(is.matched){
       return '<div class="entry-row done"><span class="entry-type" style="background:#4285f4;">반납</span><span class="entry-persons">'+label+'</span><span style="font-size:13px;color:#666;">'+is.location+'</span><span style="font-size:12px;color:#999;margin-left:auto;">'+is.time+' ~ '+is.returnTime+'</span>'+delBtn+'</div>';
@@ -847,6 +863,8 @@ async function addPerson(){const n=document.getElementById('newPersonName').valu
 async function removePerson(i){if(!confirm(personnel[i].name+' 삭제?'))return;const bk=[...personnel];personnel.splice(i,1);if(await savePersonnel()){_refreshPersonViews();}else{personnel=bk;toast('저장 실패.');renderSettings();}}
 async function addPerson2(){const n=document.getElementById('newPerson2Name').value.trim();if(!n)return;personnel2.push({name:n});document.getElementById('newPerson2Name').value='';if(await savePersonnel()){toast(n+' 추가(2)');_refreshPersonViews();}else{personnel2.pop();document.getElementById('newPerson2Name').value=n;toast('저장 실패.');}}
 async function removePerson2(i){if(!confirm(personnel2[i].name+' 삭제?'))return;const bk=[...personnel2];personnel2.splice(i,1);if(await savePersonnel()){_refreshPersonViews();}else{personnel2=bk;toast('저장 실패.');renderSettings();}}
+async function addPerson3(){const n=document.getElementById('newPerson3Name').value.trim();if(!n)return;personnel3.push({name:n});document.getElementById('newPerson3Name').value='';if(await savePersonnel()){toast(n+' 추가(3)');_refreshPersonViews();}else{personnel3.pop();document.getElementById('newPerson3Name').value=n;toast('저장 실패.');}}
+async function removePerson3(i){if(!confirm(personnel3[i].name+' 삭제?'))return;const bk=[...personnel3];personnel3.splice(i,1);if(await savePersonnel()){_refreshPersonViews();}else{personnel3=bk;toast('저장 실패.');renderSettings();}}
 async function addKeyPreset(){const n=document.getElementById('newKeyPreset').value.trim();if(!n)return;keyPresets.push(n);document.getElementById('newKeyPreset').value='';if(await savePersonnel()){renderKeyPresets();renderSettings();}else{keyPresets.pop();document.getElementById('newKeyPreset').value=n;toast('저장 실패. 토큰을 확인해주세요.');}}
 async function removeKeyPreset(i){const bk=[...keyPresets];keyPresets.splice(i,1);if(await savePersonnel()){renderKeyPresets();renderSettings();}else{keyPresets=bk;toast('저장 실패. 토큰을 확인해주세요.');renderSettings();}}
 async function addEntryType(){const n=document.getElementById('newEntryType').value.trim();if(!n)return;entryTypes.push(n);document.getElementById('newEntryType').value='';if(await savePersonnel()){renderSettings();renderEntryForm();}else{entryTypes.pop();document.getElementById('newEntryType').value=n;toast('저장 실패. 토큰을 확인해주세요.');}}
