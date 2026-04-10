@@ -70,19 +70,24 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
 .timeline-del:active{background:#f0f0f0;color:#ea4335;}
 .timeline-cb{width:20px;height:20px;accent-color:#ea4335;cursor:pointer;flex-shrink:0;margin-right:4px;}
 /* 타임라인 배지 + 상세 */
-.tl-main{display:flex;align-items:center;flex:1;cursor:pointer;min-width:0;}
-.tl-badges{display:flex;gap:5px;flex-wrap:wrap;flex:1;}
-.tl-badge{font-size:11px;padding:3px 9px;border-radius:10px;font-weight:700;white-space:nowrap;}
-.tl-badge-action-in{background:#e6f4ea;color:#137333;}
-.tl-badge-action-out{background:#fce8e6;color:#c5221f;}
-.tl-badge-action-away{background:#fef7e0;color:#b06000;}
-.tl-badge-action-other{background:#f1f3f4;color:#555;}
-.tl-badge-loc{background:#e8f0fe;color:#1967d2;}
-.tl-badge-dur{background:#f1f3f4;color:#555;font-size:11px;}
-.tl-detail{display:none;padding:8px 0 2px 0;width:100%;}
-.tl-detail-group{font-size:13px;color:#444;line-height:1.6;padding:3px 0;}
-.tl-detail-group b{font-size:11px;color:#888;font-weight:500;margin-right:4px;}
-.tl-expand-hint{font-size:11px;color:#aaa;margin-left:4px;}
+.tl-badges{display:flex;gap:5px;flex-wrap:wrap;flex:1;align-items:center;}
+.tl-badge{font-size:11px;padding:3px 10px;border-radius:10px;font-weight:700;white-space:nowrap;}
+/* 액션 배지: 테두리형으로 타입태그와 구분 */
+.tl-badge-action-in{background:#fff;border:1.5px solid #137333;color:#137333;}
+.tl-badge-action-out{background:#fff;border:1.5px solid #c5221f;color:#c5221f;}
+.tl-badge-action-away{background:#fff;border:1.5px solid #b06000;color:#b06000;}
+.tl-badge-action-other{background:#fff;border:1.5px solid #aaa;color:#666;}
+/* 장소 배지: 채운형 파란 계열 */
+.tl-badge-loc{background:#e8f0fe;color:#1967d2;border:none;}
+/* 시간 배지: 회색 */
+.tl-badge-dur{background:#f1f3f4;color:#666;border:none;}
+/* 상세 패널 */
+.tl-detail{display:none;width:100%;padding:10px 0 4px 54px;}
+.tl-detail-group{font-size:13px;color:#333;line-height:1.7;word-break:keep-all;}
+.tl-detail-group b{font-size:11px;color:#999;font-weight:500;margin-right:4px;}
+/* 하단 토글 바 */
+.tl-toggle-bar{width:100%;margin-top:8px;background:none;border:none;border-top:1px solid #f0f0f0;padding:6px 0 0 54px;text-align:left;cursor:pointer;font-size:12px;color:#aaa;display:flex;align-items:center;gap:3px;}
+.tl-toggle-bar .material-icons-round{font-size:14px;transition:transform 0.2s;}
 /* 멀티삭제 FAB */
 .multi-del-bar{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:#ea4335;color:#fff;padding:12px 28px;border-radius:28px;font-size:15px;font-weight:700;cursor:pointer;z-index:20;box-shadow:0 4px 16px rgba(234,67,53,0.4);display:none;border:none;gap:8px;align-items:center;}
 .multi-del-bar.show{display:flex;}
@@ -563,19 +568,21 @@ function renderTimeline(){
     }
 
     const hasDetail=detail.trim()!=='';
-    const expandHint=hasDetail?'<span class="tl-expand-hint material-icons-round" style="font-size:14px;vertical-align:middle;">expand_more</span>':'';
+    const toggleBar=hasDetail
+      ?'<button class="tl-toggle-bar" id="tlbtn-'+oi+'" onclick="tlToggle(\'tld-'+oi+'\',\'tlbtn-'+oi+'\')">'
+        +'<span class="material-icons-round">expand_more</span>'
+        +'<span>상세</span>'
+        +'</button>'
+      :'';
 
     return '<div class="timeline-item'+(checked?' checked':'')+'" style="flex-wrap:wrap;">'
       +'<input type="checkbox" class="timeline-cb" '+(checked?'checked':'')+' onchange="toggleCheck('+oi+',this)" onclick="event.stopPropagation()">'
       +'<span class="timeline-time">'+ev.time+'</span>'
       +'<span class="timeline-tag '+tc+'">'+tg+'</span>'
-      +(hasDetail
-        ?'<div class="tl-main" onclick="tlToggle(\'tld-'+oi+'\')">'
-          +'<div class="tl-badges">'+badges+expandHint+'</div>'
-          +'</div>'
-        :'<div class="tl-main"><div class="tl-badges">'+badges+'</div></div>')
+      +'<div class="tl-badges">'+badges+'</div>'
       +'<span class="timeline-del material-icons-round" onclick="deleteEvent('+oi+')">close</span>'
       +(hasDetail?'<div class="tl-detail" id="tld-'+oi+'">'+detail+'</div>':'')
+      +toggleBar
       +'</div>';
   }).join('');
 }
@@ -894,14 +901,17 @@ async function returnKey(subject,location){
 }
 
 // ── 타임라인 상세 토글 ──
-function tlToggle(id){
-  const el=document.getElementById(id);
+function tlToggle(detailId, btnId){
+  const el=document.getElementById(detailId);
   if(!el)return;
   const open=el.style.display==='block';
   el.style.display=open?'none':'block';
-  // 화살표 아이콘 회전
-  const hint=el.previousElementSibling&&el.previousElementSibling.querySelector('.tl-expand-hint');
-  if(hint)hint.style.transform=open?'':'rotate(180deg)';
+  const btn=document.getElementById(btnId);
+  if(btn){
+    const icon=btn.querySelector('.material-icons-round');
+    if(icon)icon.style.transform=open?'':'rotate(180deg)';
+    btn.querySelector('span:last-child').textContent=open?'상세':'닫기';
+  }
 }
 
 // ── 체크 멀티삭제 ──
