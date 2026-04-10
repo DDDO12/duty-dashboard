@@ -205,6 +205,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
             <div class="person-selector" id="entryPersonChips2" style="flex-direction:column;"></div>
           </div>
         </div>
+        <button onclick="createEntry();toggleAddForm('entry')" style="width:100%;margin-top:16px;padding:14px;background:#1a73e8;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;">저장</button>
       </div>
     </div>
     <div class="card-title" style="padding:0 4px;">진행 중인 출입</div>
@@ -501,17 +502,10 @@ function renderEntryForm(){
 }
 function toggleEntryType(t){selectedEntryType=selectedEntryType===t?null:t;renderEntryForm();}
 function selectEntryAction(a){selectedEntryAction=a;renderEntryForm();}
-let _entryAutoTimer=null;
 function selectEntryPerson(slot,n){
   const s=slot===1?selectedEntryPerson1:selectedEntryPerson2;
   if(s.has(n))s.delete(n);else s.add(n);
   renderEntryForm();
-  clearTimeout(_entryAutoTimer);
-  if(selectedEntryType && selectedEntryPerson1.size){
-    _entryAutoTimer=setTimeout(()=>{
-      if(selectedEntryType && selectedEntryPerson1.size){createEntry();toggleAddForm('entry');}
-    },1500);
-  }
 }
 
 function createEntry(){
