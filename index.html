@@ -510,11 +510,12 @@ function selectEntryPerson(slot,n){
 
 function createEntry(){
   if(!selectedEntryType){toast('유형을 선택하세요');return;}
-  if(!selectedEntryPerson1.size){toast('대상자 1을 선택하세요');return;}
+  if(!selectedEntryPerson1.size&&!selectedEntryPerson2.size){toast('대상자를 선택하세요');return;}
   const s1=[...selectedEntryPerson1].join(', ');
   const s2=[...selectedEntryPerson2].join(', ');
-  const subject=s1+(s2?' / '+s2:'');
-  const ev={time:nowTime(),type:'entry',action:selectedEntryAction,subject:s1,subject2:s2,location:selectedEntryType};
+  const parts=[s1,s2].filter(Boolean);
+  const subject=parts.join(' / ');
+  const ev={time:nowTime(),type:'entry',action:selectedEntryAction,subject:s1||s2,subject2:s1?s2:'',location:selectedEntryType};
   events.push(ev);
   saveEvents().then(ok=>{if(ok){toast(subject+' '+selectedEntryType+' '+selectedEntryAction);renderTimeline();}});
   createBoardTimer('entry',selectedEntryType,subject,'');
