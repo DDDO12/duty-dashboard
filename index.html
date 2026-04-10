@@ -198,10 +198,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
       </div>
       <div id="entryAddBody" style="display:none;margin-top:12px;">
         <div class="card-title">유형 선택</div>
-        <div class="type-selector" id="entryTypes"></div>
-        <div class="card-title" style="margin-top:12px;">액션 선택</div>
-        <div class="type-selector" id="entryActionChips"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+        <div class="type-selector" id="entryTypes" style="margin-top:8px;"></div>
+        <div class="card-title" style="margin-top:16px;">액션 선택</div>
+        <div class="type-selector" id="entryActionChips" style="margin-top:8px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
           <div>
             <div class="card-title">대상자 1</div>
             <div class="person-selector" id="entryPersonChips1" style="flex-direction:column;"></div>
@@ -226,7 +226,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
       </div>
       <div id="patrolAddBody" style="display:none;margin-top:12px;">
         <div class="card-title">대상자 선택 (복수 가능)</div>
-        <div class="person-selector" id="patrolPersonChips"></div>
+        <div class="person-selector" id="patrolPersonChips" style="margin-top:8px;"></div>
         <button class="entry-add-btn" style="background:#34a853;" onclick="createPatrol()">+ 순찰 시작</button>
       </div>
     </div>
@@ -242,7 +242,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
       </div>
       <div id="cctvAddBody" style="display:none;margin-top:12px;">
         <div class="card-title">대상자 선택 (복수 가능)</div>
-        <div class="person-selector" id="cctvPersonChips"></div>
+        <div class="person-selector" id="cctvPersonChips" style="margin-top:8px;"></div>
         <button class="entry-add-btn" style="background:#9334e6;" onclick="createCCTV()">+ CCTV 점검 시작</button>
       </div>
     </div>
@@ -260,15 +260,15 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
           <div>
             <div class="card-title">대상자 1</div>
-            <div class="person-grid" id="keyPersons1"></div>
+            <div class="person-grid" id="keyPersons1" style="margin-top:8px;"></div>
           </div>
           <div>
             <div class="card-title">대상자 2</div>
-            <div class="person-grid" id="keyPersons2"></div>
+            <div class="person-grid" id="keyPersons2" style="margin-top:8px;"></div>
           </div>
         </div>
         <div class="card-title">열쇠 선택</div>
-        <div class="preset-grid" id="keyPresets"></div>
+        <div class="preset-grid" id="keyPresets" style="margin-top:8px;"></div>
         <div class="key-actions">
           <button style="background:#f9ab00;" onclick="addKey('issue')">수령</button>
           <button style="background:#4285f4;" onclick="addKey('return')">반납</button>
@@ -287,7 +287,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
       </div>
       <div id="otAddBody" style="display:none;margin-top:12px;">
         <div class="card-title">대상자 선택 (복수 가능)</div>
-        <div class="person-selector" id="otPersonChips"></div>
+        <div class="person-selector" id="otPersonChips" style="margin-top:8px;"></div>
         <textarea class="note-input" id="otNote" rows="2" placeholder="사유 (선택)" style="margin-top:0;margin-bottom:12px;"></textarea>
         <button class="entry-add-btn" style="background:#ea4335;" onclick="createOT()">+ 초과근무 시작</button>
       </div>
