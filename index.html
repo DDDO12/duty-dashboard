@@ -182,6 +182,29 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 24px;border-radius:24px;font-size:14px;font-weight:500;z-index:100;display:none;max-width:85%;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.2);}
 .toast.show{display:block;animation:fadeInOut 2s;}
 @keyframes fadeInOut{0%{opacity:0;transform:translateX(-50%) translateY(10px)}10%{opacity:1;transform:translateX(-50%) translateY(0)}80%{opacity:1}100%{opacity:0}}
+
+/* -- 상단 요약 바 -- */
+.summary-bar{display:flex;gap:8px;overflow-x:auto;padding:12px 16px;background:#fff;border-bottom:1px solid #eee;-webkit-overflow-scrolling:touch;}
+.summary-bar::-webkit-scrollbar{display:none;}
+.summary-card{flex-shrink:0;background:#f8f9fa;border-radius:10px;padding:8px 14px;text-align:center;min-width:64px;}
+.summary-card.active-alert{background:#fff3e0;}
+.summary-card .sc-num{font-size:20px;font-weight:700;color:#1a73e8;line-height:1;}
+.summary-card.active-alert .sc-num{color:#e65100;}
+.summary-card .sc-label{font-size:10px;color:#888;margin-top:2px;}
+/* -- 진행 중 작업 블록 -- */
+.active-block{margin:12px 16px 0;background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,0.08);overflow:hidden;}
+.active-block-header{padding:10px 14px;font-size:12px;font-weight:700;color:#555;background:#f8f9fa;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:6px;}
+.active-block-header .live-dot{width:7px;height:7px;border-radius:50%;background:#34a853;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.active-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f5f5f5;}
+.active-row:last-child{border-bottom:none;}
+.active-row-type{font-size:11px;font-weight:700;color:#fff;padding:3px 8px;border-radius:6px;flex-shrink:0;min-width:44px;text-align:center;}
+.active-row-info{flex:1;min-width:0;}
+.active-row-persons{font-size:13px;font-weight:500;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.active-row-sub{font-size:11px;color:#999;margin-top:1px;}
+.active-row-timer{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:#34a853;min-width:48px;text-align:right;}
+.active-row-stop{background:#ea4335;border:none;color:#fff;border-radius:50%;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.active-row-stop .material-icons-round{font-size:16px;}
 </style>
 </head>
 <body>
@@ -201,6 +224,15 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f5f5f5;color:#222;min-hei
 
   <!-- Pages -->
   <div class="page active" id="page-timeline">
+    <!-- 상단 요약 바 -->
+    <div class="summary-bar" id="summaryBar"></div>
+    <!-- 진행 중 작업 블록 -->
+    <div class="active-block" id="activeBlock" style="display:none;">
+      <div class="active-block-header">
+        <span class="live-dot"></span>진행 중인 작업
+      </div>
+      <div id="activeList"></div>
+    </div>
     <!-- Date Nav (타임라인 전용) -->
     <div class="date-nav">
       <button onclick="prevDay()"><span class="material-icons-round">chevron_left</span></button>
@@ -514,8 +546,65 @@ function savePersonnel(){
   return Promise.resolve(true);
 }
 
+// ── 상단 요약 바 렌더링 ──
+function renderSummaryBar(){
+  const bar=document.getElementById('summaryBar');
+  if(!bar)return;
+
+  const entryAll=events.filter(e=>e.type==='entry').length;
+
+  const running=Object.values(boardTimers||{}).filter(t=>!t.done);
+  const patrolActive=running.filter(t=>t.category==='patrol').length;
+  const cctvActive=running.filter(t=>t.category==='cctv').length;
+  const otActive=running.filter(t=>t.category==='overtime').length;
+
+  const keyEv=events.filter(e=>e.type==='key');
+  const issued=keyEv.filter(e=>e.action==='issue');
+  const returned=keyEv.filter(e=>e.action==='return');
+  let unreturned=issued.length;
+  returned.forEach(r=>{const m=issued.find(is=>is.subject===r.subject&&is.location===r.location&&!is._matched);if(m){m._matched=true;unreturned--;}});
+  issued.forEach(i=>delete i._matched);
+
+  function sc(num,label,alert){
+    return '<div class="summary-card'+(alert&&num>0?' active-alert':'')+'"><div class="sc-num">'+num+'</div><div class="sc-label">'+label+'</div></div>';
+  }
+  bar.innerHTML=sc(entryAll,'출입')+sc(patrolActive,'순찰 중',true)+sc(cctvActive,'CCTV 중',true)+sc(unreturned,'미반납',true)+sc(otActive,'초과 중',true);
+}
+
+// ── 진행 중 작업 블록 렌더링 ──
+function renderActiveBlock(){
+  const block=document.getElementById('activeBlock');
+  const list=document.getElementById('activeList');
+  if(!block||!list)return;
+
+  const running=Object.entries(boardTimers||{}).filter(([,t])=>!t.done);
+  if(!running.length){block.style.display='none';return;}
+  block.style.display='block';
+
+  const colors={entry:'#1a73e8',patrol:'#34a853',cctv:'#9334e6',overtime:'#ea4335'};
+  const labels={entry:'출입',patrol:'순찰',cctv:'CCTV',overtime:'초과'};
+
+  list.innerHTML=running.map(([id,t])=>{
+    const color=colors[t.category]||'#888';
+    const label=labels[t.category]||t.category;
+    const elapsed=getBoardElapsed(parseInt(id));
+    const sub=t.type&&t.type!==label?t.type:'';
+    return '<div class="active-row">'
+      +'<span class="active-row-type" style="background:'+color+'">'+label+'</span>'
+      +'<div class="active-row-info">'
+        +'<div class="active-row-persons">'+t.persons+'</div>'
+        +(sub?'<div class="active-row-sub">'+sub+'</div>':'')
+      +'</div>'
+      +'<span class="active-row-timer" id="ar-timer-'+id+'">'+fmtTime(elapsed)+'</span>'
+      +'<button class="active-row-stop" onclick="stopBoard('+id+')" title="종료"><span class="material-icons-round">stop</span></button>'
+      +'</div>';
+  }).join('');
+}
+
 // ── 타임라인 렌더링 ──
 function renderTimeline(){
+  renderSummaryBar();
+  renderActiveBlock();
   const list=document.getElementById('timelineList'),empty=document.getElementById('emptyMsg'),stats=document.getElementById('statsRow');
   if(!events.length){list.innerHTML='';empty.style.display='block';stats.innerHTML='';return;}
   empty.style.display='none';
@@ -706,7 +795,7 @@ function renderBoard(category, boardId, typeColor){
   }).join('');
 }
 function renderEntryBoard(){renderBoard('entry','entryBoard','#1a73e8');}
-function renderAllBoards(){renderEntryBoard();renderBoard('patrol','patrolBoard','#34a853');renderBoard('cctv','cctvBoard','#9334e6');renderBoard('overtime','otBoard','#ea4335');}
+function renderAllBoards(){renderEntryBoard();renderBoard('patrol','patrolBoard','#34a853');renderBoard('cctv','cctvBoard','#9334e6');renderBoard('overtime','otBoard','#ea4335');renderSummaryBar();renderActiveBlock();}
 
 // ── 통합 타이머 로직 ──
 function getBoardElapsed(id){
