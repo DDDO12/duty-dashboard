@@ -1611,6 +1611,29 @@ body.theme-light .entry-add-card {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+/* ── 스톱워치 메모 입력 ── */
+.sw-memo-input {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-subtle);
+  color: var(--text-primary);
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: 'Noto Sans KR', sans-serif;
+  resize: none;
+  height: 72px;
+  margin: 12px 0 4px;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  outline: none;
+}
+
+.sw-memo-input:focus {
+  border-color: var(--accent-green);
+  background: var(--bg-surface);
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.3; transform: scale(1.05); }

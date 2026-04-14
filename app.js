@@ -824,27 +824,33 @@ function quickStartFromModal(cat,name){
   if(cat==='patrol'){
     selectedPatrolPersons.clear();selectedPatrolPersons.add(name);
     createPatrol();
-    showStopwatch(name,'순찰','#34a853');
+    showStopwatch(name,'순찰','#34a853',timerIdCounter);
   }else if(cat==='cctv'){
     selectedCctvPersons.clear();selectedCctvPersons.add(name);
     createCCTV();
-    showStopwatch(name,'CCTV','#9334e6');
+    showStopwatch(name,'CCTV','#9334e6',timerIdCounter);
   }
 }
-let _swInterval=null,_swLocked=false;
+let _swInterval=null,_swLocked=false,_swTimerId=null;
 let _lockPressTimer=null;
 let _lockProgress=0;
 
-function showStopwatch(name,label,color){
-  _swLocked=true; // 최초 상태: 잠금
+function showStopwatch(name,label,color,timerId){
+  // 순찰은 잠금 없이 바로 시작, CCTV는 잠금
+  _swLocked=(label!=='순찰');
+  _swTimerId=timerId||null;
   const content=document.getElementById('inspModalContent');
   const startMs=Date.now();
+  const lockBtn=_swLocked
+    ?'<button class="sw-stop-btn" style="background:#78909c;" id="swLockBtn" onclick="toggleSwLock()"><span class="material-icons-round" style="font-size:28px;color:#fff;">lock_open</span></button>'
+    :'<button class="sw-stop-btn" style="background:#78909c;" id="swLockBtn" onclick="toggleSwLock()"><span class="material-icons-round" style="font-size:28px;color:#fff;">lock_open</span></button>';
   content.innerHTML='<div class="sw-label" style="color:'+color+'">'+label+'</div>'
     +'<div class="sw-subject">'+escapeHtml(name)+'</div>'
     +'<div class="sw-display" id="swTime">00:00</div>'
+    +'<textarea id="swMemoInput" class="sw-memo-input" placeholder="메모 (선택)"></textarea>'
     +'<div style="display:flex;justify-content:center;gap:20px;margin-top:8px;">'
       +'<button class="sw-stop-btn" style="background:'+color+';" id="swStopBtn" onclick="closeStopwatch()">중지</button>'
-      +'<button class="sw-stop-btn" style="background:#78909c;font-size:22px;" id="swLockBtn" onclick="toggleSwLock()"><span class="material-icons-round" style="font-size:28px;color:#fff;">lock_open</span></button>'
+      +lockBtn
     +'</div>'
     +'<div id="swLockOverlay" style="position:absolute;inset:0;background:rgba(0,0,0,0.7);border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;">'
       +'<span class="material-icons-round" id="lockIcon" style="font-size:48px;color:#fff;margin-bottom:8px;cursor:pointer;user-select:none;">lock</span>'
@@ -925,6 +931,12 @@ function toggleSwLock(){
 }
 function closeStopwatch(){
   if(_swLocked)return;
+  // 메모 저장 → 보드 타이머에 반영
+  const memoEl=document.getElementById('swMemoInput');
+  if(memoEl&&_swTimerId!=null&&boardTimers[_swTimerId]){
+    boardTimers[_swTimerId].note=memoEl.value.trim();
+    saveBoardState();
+  }
   clearInterval(_swInterval);_swInterval=null;
   closeInspModal();
   renderInspForm();renderAllBoards();
