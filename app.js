@@ -836,8 +836,8 @@ let _lockPressTimer=null;
 let _lockProgress=0;
 
 function showStopwatch(name,label,color,timerId){
-  // 순찰은 잠금 없이 바로 시작, CCTV는 잠금
-  _swLocked=(label!=='순찰');
+  // CCTV는 잠금 없이 바로 시작, 순찰은 잠금
+  _swLocked=(label!=='CCTV');
   _swTimerId=timerId||null;
   const content=document.getElementById('inspModalContent');
   const startMs=Date.now();
