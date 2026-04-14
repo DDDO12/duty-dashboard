@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>실시사항</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=FIXED_V18">
+</head>
+<body>
+
+<!-- 스플래시 -->
+<div id="splash" class="splash-screen">
+  <svg class="splash-logo" width="120" height="170" viewBox="576 2978 348 542" xmlns="http://www.w3.org/2000/svg">
+    <path d="M827.514 3187.91C853.594 3166.15 869.601 3133.39 869.601 3097.15 869.601 3031.74 815.984 2978 750.728 2978 684.799 2978 631.071 3031.74 631.071 3097.15 631.071 3133.5 647.749 3166.15 673.158 3187.91 615.177 3216.97 576 3275.87 576 3344.87 576 3441.47 654.241 3520 750.728 3520 846.43 3520 924 3441.58 924 3344.87 924 3275.87 885.495 3216.97 827.514 3187.91Z" fill="#FFF100"/>
+  </svg>
+  <div class="splash-title">실시사항</div>
+</div>
+
+<!-- Setup (미사용) -->
+<div id="setup" class="setup-page" style="display:none;"></div>
+
+<!-- Main -->
+<div id="app" style="display:none;">
+  <div class="header">
+    <div class="header-left">
+      <h1>실시사항</h1>
+      <div class="date" id="todayDate"></div>
+    </div>
+    <span class="build-tag">V18</span>
+    <button class="sync-btn" onclick="syncToMaru()"><span class="material-icons-round">sync</span> 동기화</button>
+    <button class="header-icon-btn" onclick="openSettingsPage()"><span class="material-icons-round">settings</span></button>
+  </div>
+
+  <!-- 공통 context bar: 모든 탭에서 항상 노출 -->
+  <div id="contextBar">
+    <div class="active-block" id="activeBlock" style="display:none;">
+      <div class="active-block-header" onclick="toggleActiveBlock()" style="cursor:pointer;">
+        <span class="live-dot"></span>
+        <span id="activeBlockSummary">진행 중 0건</span>
+        <span class="material-icons-round" id="activeBlockArrow" style="font-size:18px;margin-left:auto;transition:transform 0.2s;">expand_more</span>
+      </div>
+      <div id="activeList" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Pages -->
+  <div class="page active" id="page-timeline">
+    <!-- Date Nav (타임라인 전용) -->
+    <div class="date-nav">
+      <button onclick="prevDay()"><span class="material-icons-round">chevron_left</span></button>
+      <span class="current-date" id="dateLabel" onclick="openCalendar()"></span>
+      <button onclick="nextDay()"><span class="material-icons-round">chevron_right</span></button>
+    </div>
+    <div class="tl-filter-bar" id="tlFilterBar">
+      <button class="tl-filter-chip active" data-type="all" onclick="setTlFilter('all')">전체</button>
+      <button class="tl-filter-chip" data-type="entry" onclick="setTlFilter('entry')">출입</button>
+      <button class="tl-filter-chip" data-type="inspection" onclick="setTlFilter('inspection')">점검</button>
+      <button class="tl-filter-chip" data-type="key" onclick="setTlFilter('key')">열쇠</button>
+      <button class="tl-filter-chip" data-type="overtime" onclick="setTlFilter('overtime')">초과근무</button>
+    </div>
+    <div class="stats-row" id="statsRow"></div>
+    <div id="timelineList"></div>
+    <div class="empty-state" id="emptyMsg"><span class="material-icons-round">event_note</span><p>아직 기록이 없어요</p></div>
+  </div>
+
+  <div class="page" id="page-entry-keys">
+    <div class="entry-add-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('entry')">
+        <span class="card-title" style="margin:0;">+ 새 출입 기록</span>
+        <span class="material-icons-round" id="entryToggleIcon" style="color:var(--accent-green);font-size:20px;">expand_more</span>
+      </div>
+      <div id="entryAddBody" style="display:none;margin-top:12px;">
+        <div class="card-title">유형 선택</div>
+        <div class="type-selector" id="entryTypes" style="margin-top:8px;"></div>
+        <div class="card-title" style="margin-top:16px;">액션 선택</div>
+        <div class="type-selector" id="entryActionChips" style="margin-top:8px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
+          <div>
+            <div class="card-title">대상자 1</div>
+            <div class="person-selector" id="entryPersonChips1" style="flex-direction:column;"></div>
+          </div>
+          <div>
+            <div class="card-title">대상자 2</div>
+            <div class="person-selector" id="entryPersonChips2" style="flex-direction:column;"></div>
+          </div>
+        </div>
+        <button onclick="createEntry();toggleAddForm('entry')" class="entry-add-btn" style="margin-top:16px;">저장</button>
+      </div>
+    </div>
+    <div class="entry-add-card" style="margin-top:0;border:1.5px dashed #d0d7e0;background:#fafbfc;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('manual-entry')">
+        <span class="card-title" style="margin:0;color:#666;">✏️ 출입 수기 입력</span>
+        <span class="material-icons-round" id="manualEntryIcon" style="color:var(--accent-green);font-size:20px;">expand_more</span>
+      </div>
+      <div id="manualEntryBody" style="display:none;margin-top:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div><div class="card-title">대상자</div><input type="text" id="mEntryPerson" placeholder="이름" style="width:100%;padding:10px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;box-sizing:border-box;"></div>
+          <div><div class="card-title">유형</div><input type="text" id="mEntryLoc" placeholder="탄약고·무기고…" style="width:100%;padding:10px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;box-sizing:border-box;"></div>
+        </div>
+        <div class="card-title" style="margin-top:10px;">액션</div>
+        <select id="mEntryAction" style="width:100%;padding:10px 14px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;">
+          <option value="입장">입장</option><option value="퇴장">퇴장</option><option value="외출">외출</option><option value="복귀">복귀</option>
+        </select>
+        <div class="card-title" style="margin-top:10px;">시각</div>
+        <div id="mEntryTimeTp" style="margin-top:4px;"></div>
+        <textarea class="note-input" id="mEntryNote" rows="2" placeholder="메모 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>
+        <button class="entry-add-btn" onclick="saveManualEntry()">저장</button>
+      </div>
+    </div>
+    <div class="card-title" style="padding:0 4px;">진행 중인 출입</div>
+    <div class="entry-board" id="entryBoard"></div>
+    <div style="margin:20px 0 12px;font-size:12px;font-weight:700;color:var(--accent-amber);letter-spacing:1px;padding:0 4px;display:flex;align-items:center;gap:8px;">
+      <span class="material-icons-round" style="font-size:18px;">key</span> 열쇠 관리
+    </div>
+    <div class="entry-add-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('key')">
+        <span class="card-title" style="margin:0;">+ 열쇠 기록</span>
+        <span class="material-icons-round" id="keyToggleIcon" style="color:var(--accent-amber);font-size:20px;">expand_more</span>
+      </div>
+      <div id="keyAddBody" style="display:none;margin-top:12px;">
+        <div class="card-title">인계자</div>
+        <div class="person-selector" id="handoverChips" style="margin-top:8px;margin-bottom:16px;"></div>
+        <div class="card-title">인수자</div>
+        <div id="keyPersonSelector" style="margin-bottom:12px;"></div>
+        <div class="card-title">열쇠 그룹</div>
+        <div class="preset-grid" id="keyPresets" style="margin-top:8px;"></div>
+        <div class="card-title" style="margin-top:10px;">세부 키 선택</div>
+        <div class="person-selector key-detail-list" id="keyDetails" style="margin-top:8px;"></div>
+        <div class="key-summary-box" id="keySelectionSummary"></div>
+        <div class="card-title" style="margin-top:14px;">현재 보유 중 키</div>
+        <div class="person-selector key-detail-list" id="keyHeldDetails" style="margin-top:8px;"></div>
+        <div class="key-summary-box" id="keyReturnSummary"></div>
+        <div class="key-actions">
+          <button id="btnKeyIssue" style="background:var(--accent-amber);opacity:0.4;cursor:not-allowed;" onclick="addKey('issue')" disabled>수령</button>
+          <button id="btnKeyReturn" style="background:var(--accent-teal);opacity:0.4;cursor:not-allowed;" onclick="addKey('return')" disabled>반납</button>
+        </div>
+      </div>
+    </div>
+    <div class="entry-add-card" style="margin-top:0;border:1.5px dashed #d0d7e0;background:#fafbfc;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('manual-key')">
+        <span class="card-title" style="margin:0;color:#666;">✏️ 열쇠 수기 입력</span>
+        <span class="material-icons-round" id="manualKeyIcon" style="color:var(--accent-amber);font-size:20px;">expand_more</span>
+      </div>
+      <div id="manualKeyBody" style="display:none;margin-top:12px;">
+        <div class="card-title">구분</div>
+        <select id="mKeyAction" style="width:100%;padding:10px 14px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;">
+          <option value="issue">수령</option><option value="return">반납</option>
+        </select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+          <div><div class="card-title">대상자</div><input type="text" id="mKeyPerson" placeholder="이름" style="width:100%;padding:10px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;box-sizing:border-box;"></div>
+          <div><div class="card-title">열쇠명</div><input type="text" id="mKeyName" placeholder="무기고 1번…" style="width:100%;padding:10px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;box-sizing:border-box;"></div>
+        </div>
+        <div class="card-title" style="margin-top:10px;">시각</div>
+        <div id="mKeyTimeTp" style="margin-top:4px;"></div>
+        <textarea class="note-input" id="mKeyNote" rows="2" placeholder="메모 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>
+        <button class="entry-add-btn" style="background:var(--accent-amber);color:#fff;" onclick="saveManualKey()">저장</button>
+      </div>
+    </div>
+    <div class="card-title" style="padding:0 4px;">오늘 열쇠 기록</div>
+    <div class="entry-board" id="keyBoard"></div>
+  </div>
+
+  <div class="page" id="page-inspection">
+    <div class="insp-fullscreen" id="inspFormArea"></div>
+  </div>
+
+  <div class="page" id="page-overtime-cal">
+    <div class="entry-add-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('ot')">
+        <span class="card-title" style="margin:0;">+ 새 초과근무</span>
+        <span class="material-icons-round" id="otToggleIcon" style="color:var(--status-error);font-size:20px;">expand_more</span>
+      </div>
+      <div id="otAddBody" style="display:none;margin-top:12px;">
+        <div class="card-title">대상자 선택 (복수 가능)</div>
+        <div class="person-selector" id="otPersonChips" style="margin-top:8px;"></div>
+        <div class="card-title" style="margin-top:14px;">기준시간 <span style="font-weight:400;font-size:11px;color:#999;">(초과 시작 시각)</span></div>
+        <div id="otBaseTp" style="margin-top:4px;"></div>
+        <div class="card-title" style="margin-top:12px;">종료시각 <span style="font-weight:400;font-size:11px;color:#999;">(실제 종료 또는 현재)</span></div>
+        <div id="otEndTp" style="margin-top:4px;"></div>
+        <textarea class="note-input" id="otNote" rows="2" placeholder="사유 (선택)" style="margin-top:12px;margin-bottom:12px;"></textarea>
+        <button class="entry-add-btn" style="background:var(--status-error);" onclick="createOT()">+ 초과근무 등록</button>
+      </div>
+    </div>
+    <div class="ot-summary-strip"><div id="otTodayTotal">당일 누적 00:00</div><div id="otActiveCount">진행 중 0건</div></div>
+    <div class="card-title" style="padding:0 4px;">진행/완료 초과근무</div>
+    <div class="entry-board" id="otBoard"></div>
+    <div style="margin:20px 0 12px;font-size:12px;font-weight:700;color:var(--accent-teal);letter-spacing:1px;padding:0 4px;display:flex;align-items:center;gap:8px;">
+      <span class="material-icons-round" style="font-size:18px;">calendar_month</span> 월간 캘린더
+    </div>
+    <div id="calendarArea"></div>
+  </div>
+
+  <div class="page" id="page-settings">
+    <div class="entry-add-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s1')">
+        <span class="card-title" style="margin:0;">인원 관리 (대상자 1)</span>
+        <span class="material-icons-round" id="s1-icon" style="color:var(--accent-green);font-size:20px;">expand_more</span>
+      </div>
+      <div id="s1-body" style="display:none;margin-top:12px;">
+        <div id="personnelList"></div>
+        <div class="add-row"><input id="newPersonName" placeholder="이름 입력"><button onclick="addPerson()">추가</button></div>
+      </div>
+    </div>
+    <div class="entry-add-card" style="margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s2')">
+        <span class="card-title" style="margin:0;">인원 관리 (대상자 2)</span>
+        <span class="material-icons-round" id="s2-icon" style="color:var(--accent-green);font-size:20px;">expand_more</span>
+      </div>
+      <div id="s2-body" style="display:none;margin-top:12px;">
+        <div id="personnel2List"></div>
+        <div class="add-row"><input id="newPerson2Name" placeholder="이름 입력"><button onclick="addPerson2()">추가</button></div>
+      </div>
+    </div>
+    <div class="entry-add-card" style="margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s3')">
+        <span class="card-title" style="margin:0;">출입 유형 관리</span>
+        <span class="material-icons-round" id="s3-icon" style="color:var(--accent-green);font-size:20px;">expand_more</span>
+      </div>
+      <div id="s3-body" style="display:none;margin-top:12px;">
+        <div id="entryTypeList"></div>
+        <div class="add-row"><input id="newEntryType" placeholder="유형 이름 (예: 탄약고)"><button onclick="addEntryType()">추가</button></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;margin-bottom:4px;font-size:11px;font-weight:700;color:var(--accent-amber);letter-spacing:1px;padding:0 2px;">-- 열쇠 설정 --</div>
+    <div class="entry-add-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s3k')">
+        <span class="card-title" style="margin:0;">인계자 관리</span>
+        <span class="material-icons-round" id="s3k-icon" style="color:var(--accent-amber);font-size:20px;">expand_more</span>
+      </div>
+      <div id="s3k-body" style="display:none;margin-top:12px;">
+        <div id="personnel3List"></div>
+        <div class="add-row"><input id="newPerson3Name" placeholder="이름 입력"><button style="background:var(--accent-amber);" onclick="addPerson3()">추가</button></div>
+      </div>
+    </div>
+    <div class="entry-add-card" style="margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s4')">
+        <span class="card-title" style="margin:0;">열쇠 프리셋</span>
+        <span class="material-icons-round" id="s4-icon" style="color:var(--accent-amber);font-size:20px;">expand_more</span>
+      </div>
+      <div id="s4-body" style="display:none;margin-top:12px;">
+        <div id="keyPresetList"></div>
+        <div class="add-row"><input id="newKeyPreset" placeholder="열쇠 이름"><button style="background:var(--accent-amber);" onclick="addKeyPreset()">추가</button></div>
+      </div>
+    </div>
+    <div class="entry-add-card" style="margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s5')">
+        <span class="card-title" style="margin:0;">세부키 설정</span>
+        <span class="material-icons-round" id="s5-icon" style="color:var(--accent-amber);font-size:20px;">expand_more</span>
+      </div>
+      <div id="s5-body" style="display:none;margin-top:12px;">
+        <div id="keyCatalogEditor"></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;margin-bottom:4px;font-size:11px;font-weight:700;color:var(--accent-teal);letter-spacing:1px;padding:0 2px;">-- 데이터 관리 --</div>
+    <div class="entry-add-card" style="margin-top:0;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s-data')">
+        <span class="card-title" style="margin:0;">기록 내보내기 / 가져오기</span>
+        <span class="material-icons-round" id="s-data-icon" style="color:var(--accent-teal);font-size:20px;">expand_more</span>
+      </div>
+      <div id="s-data-body" style="display:none;margin-top:12px;">
+        <p style="font-size:12px;color:var(--text-secondary);margin:0 0 12px;">모든 기록과 설정을 JSON 파일로 내보내거나 가져올 수 있습니다.</p>
+        <button onclick="exportData()" style="width:100%;padding:12px;background:var(--accent-teal);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <span class="material-icons-round" style="font-size:18px;">file_download</span> 기록 내보내기
+        </button>
+        <label style="display:block;width:100%;padding:12px;background:var(--accent-purple);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;text-align:center;">
+          <span class="material-icons-round" style="font-size:18px;vertical-align:middle;">file_upload</span> 데이터 가져오기
+          <input type="file" accept=".json" onchange="importData(event)" style="display:none;">
+        </label>
+      </div>
+    </div>
+    <div style="margin-top:16px;margin-bottom:4px;font-size:11px;font-weight:700;color:var(--status-error);letter-spacing:1px;padding:0 2px;">-- 데이터 초기화 --</div>
+    <div class="entry-add-card" style="margin-top:0;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s-reset')">
+        <span class="card-title" style="margin:0;">기록 초기화 (테스트용)</span>
+        <span class="material-icons-round" id="s-reset-icon" style="color:var(--status-error);font-size:20px;">expand_more</span>
+      </div>
+      <div id="s-reset-body" style="display:none;margin-top:12px;">
+        <p style="font-size:12px;color:#999;margin:0 0 12px;">인원·설정 데이터는 삭제되지 않습니다. 실시사항·타이머 기록만 삭제됩니다.</p>
+        <button onclick="clearTodayData()" style="width:100%;padding:12px;background:#f57c00;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;">오늘 기록만 삭제</button>
+        <button onclick="clearAllData()" style="width:100%;padding:12px;background:var(--status-error);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">전체 기록 삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav" id="bottomNav">
+    <div class="nav-item active" data-page="timeline"><span class="material-icons-round">view_timeline</span>타임라인</div>
+    <div class="nav-item" data-page="entry-keys"><span class="material-icons-round">door_front</span>출입/열쇠</div>
+    <div class="nav-item" data-page="inspection"><span class="material-icons-round">manage_search</span>점검</div>
+    <div class="nav-item" data-page="overtime-cal"><span class="material-icons-round">event_note</span>근무/캘린더</div>
+  </div>
+</div>
+
+<!-- Calendar Modal -->
+<div class="modal-bg" id="calendarModal">
+  <div class="calendar-modal">
+    <div class="card-title">날짜 선택</div>
+    <input type="date" id="calendarInput">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeCalendar()">취소</button>
+      <button class="btn-confirm" onclick="selectDate()">선택</button>
+    </div>
+  </div>
+</div>
+
+<button class="multi-del-bar" id="multiDelBar" onclick="deleteChecked()"><span class="material-icons-round">delete</span><span id="multiDelCount">0</span>건 삭제</button>
+<div class="toast" id="toast"></div>
+
+<!-- 점검 모달 (스톱워치) -->
+<div class="insp-modal-overlay" id="inspModal" onclick="if(event.target===this&&!_swLocked)closeInspModal()">
+  <div class="insp-modal" id="inspModalContent"></div>
+</div>
+
+<script src="app.js?v=FIXED_V18"></script>
+</body>
+</html>
