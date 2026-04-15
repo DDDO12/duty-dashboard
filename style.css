@@ -45,6 +45,8 @@ body.theme-dark {
   --tag-check-color: #6ddf89;
   --tag-handover-bg: rgba(0,151,167,0.15);
   --tag-handover-color: #40c9d9;
+  --tag-other-bg: rgba(230,81,0,0.15);
+  --tag-other-color: #ff8a50;
   --badge-action-in-bg: transparent;
   --badge-action-in-border: #34a853;
   --badge-action-in-color: #6ddf89;
@@ -139,6 +141,8 @@ body.theme-light {
   --tag-check-color: #1967d2;
   --tag-handover-bg: #e0f7fa;
   --tag-handover-color: #006064;
+  --tag-other-bg: #fbe9e7;
+  --tag-other-color: #bf360c;
   --badge-action-in-bg: #fff;
   --badge-action-in-border: #137333;
   --badge-action-in-color: #137333;
@@ -579,6 +583,7 @@ body.theme-light .timeline-item {
 .tag-overtime { background: var(--tag-overtime-bg); color: var(--tag-overtime-color); }
 .tag-check { background: var(--tag-check-bg); color: var(--tag-check-color); }
 .tag-handover { background: var(--tag-handover-bg); color: var(--tag-handover-color); }
+.tag-other    { background: var(--tag-other-bg); color: var(--tag-other-color); }
 
 /* ── Inspection Category Button ── */
 .insp-cat-btn {
@@ -2035,6 +2040,7 @@ body.theme-light .entry-add-card {
 .tl-type-cctv    { border-left: 4px solid var(--accent-purple); padding-left: 8px; }
 .tl-type-key     { border-left: 4px solid var(--accent-amber); padding-left: 8px; }
 .tl-type-handover{ border-left: 4px solid var(--accent-teal); padding-left: 8px; }
+.tl-type-other   { border-left: 4px solid #e65100; padding-left: 8px; }
 
 /* ── 헤더 설정 버튼 ── */
 .header-icon-btn {

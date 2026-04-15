@@ -310,7 +310,7 @@ function renderTimeline(){
   if(!timelineEvents.length){stats.innerHTML='';}
   else{empty.style.display='none';}
 
-  const lb={entry:'출입',patrol:'순찰',cctv:'CCTV',key:'열쇠',handover:'인수인계'};
+  const lb={entry:'출입',patrol:'순찰',cctv:'CCTV',key:'열쇠',handover:'인수인계',other:'특이'};
   const counts={};timelineEvents.forEach(e=>{counts[e.type]=(counts[e.type]||0)+1;});
   stats.innerHTML=Object.entries(counts).map(([k,v])=>'<span class="stat-badge">'+(lb[k]||k)+' '+v+'건</span>').join('');
 
@@ -345,7 +345,7 @@ function renderTimeline(){
   const completed=timelineEvents
     .map((ev,idx)=>({ev,idx}))
     .filter(({ev})=>!SKIP_ACTIONS.has(ev.action))
-    .filter(({ev})=>tlFilter==='all'||(tlFilter==='inspection'?(ev.type==='patrol'||ev.type==='cctv'||ev.type==='handover'):ev.type===tlFilter))
+    .filter(({ev})=>tlFilter==='all'||(tlFilter==='inspection'?(ev.type==='patrol'||ev.type==='cctv'||ev.type==='handover'||ev.type==='other'):ev.type===tlFilter))
     .sort((a,b)=>{
       const at=(a.ev.end_time||a.ev.time||'').localeCompare(b.ev.end_time||b.ev.time||'');
       return -at;
@@ -393,6 +393,8 @@ function renderTimeline(){
       detail='<div class="tl-detail-group"><b>인수자</b> '+escapeHtml(ev.subject||'')+'</div>'
         +(ev.handover?'<div class="tl-detail-group"><b>인계자</b> '+escapeHtml(ev.handover)+'</div>':'')
         +noteTxt;
+    }else if(ev.type==='other'){
+      detail='<div class="tl-detail-group">'+escapeHtml(ev.subject||'')+'</div>'+noteTxt;
     }
     const hasDetail=detail.trim()!=='';
     const toggleBar=hasDetail?'<button class="tl-toggle-bar" id="tlbtn-'+oi+'" onclick="tlToggle(\'tld-'+oi+'\',\'tlbtn-'+oi+'\')"><span class="material-icons-round">expand_more</span><span>상세</span></button>':'';
@@ -983,35 +985,45 @@ function openManualInspModal(){
   const modal=document.getElementById('inspModal');
   const content=document.getElementById('inspModalContent');
   content.innerHTML='<div class="insp-modal-title">수기 입력</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'
+    +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">'
     +'<div class="insp-cat-btn" style="background:#34a853;color:#fff;border-color:#34a853;" onclick="openManualForm(\'patrol\')"><span class="material-icons-round" style="font-size:20px;display:block;margin-bottom:2px;">directions_walk</span>순찰</div>'
     +'<div class="insp-cat-btn" style="background:#9334e6;color:#fff;border-color:#9334e6;" onclick="openManualForm(\'cctv\')"><span class="material-icons-round" style="font-size:20px;display:block;margin-bottom:2px;">videocam</span>CCTV</div>'
     +'<div class="insp-cat-btn" style="background:#0097a7;color:#fff;border-color:#0097a7;" onclick="openManualForm(\'handover\')"><span class="material-icons-round" style="font-size:20px;display:block;margin-bottom:2px;">swap_horiz</span>인수인계</div>'
+    +'<div class="insp-cat-btn" style="background:#e65100;color:#fff;border-color:#e65100;" onclick="openManualForm(\'other\')"><span class="material-icons-round" style="font-size:20px;display:block;margin-bottom:2px;">report_problem</span>기타·특이사항</div>'
     +'</div>';
   modal.classList.add('open');
 }
 function openManualForm(cat){
   inspCategory=cat;inspMode='manual';
   const content=document.getElementById('inspModalContent');
-  const color={patrol:'#34a853',cctv:'#9334e6',handover:'#0097a7'}[cat];
-  const label={patrol:'순찰',cctv:'CCTV',handover:'인수인계'}[cat];
+  const color={patrol:'#34a853',cctv:'#9334e6',handover:'#0097a7',other:'#e65100'}[cat];
+  const label={patrol:'순찰',cctv:'CCTV',handover:'인수인계',other:'기타·특이사항'}[cat];
   if(cat==='patrol'||cat==='cctv'){
     const chipsId='modalManualChips';
     const id=cat==='patrol'?'Patrol':'Cctv';
-    const sid='mModal'+id+'StartTp';
-    const eid='mModal'+id+'EndTp';
+    const sid='m'+id+'StartTp';
+    const eid='m'+id+'EndTp';
     content.innerHTML='<div class="insp-modal-title" style="color:'+color+'">'+label+' 수기 입력</div>'
       +'<div class="card-title">대상자</div>'
       +'<div class="person-selector" id="'+chipsId+'" style="margin-top:6px;"></div>'
       +'<div style="margin-top:10px;"><div class="card-title">시작 시각</div><div id="'+sid+'" style="margin-top:6px;"></div></div>'
       +'<div style="margin-top:10px;"><div class="card-title">종료 시각</div><div id="'+eid+'" style="margin-top:6px;"></div></div>'
-      +'<textarea class="note-input" id="mModal'+id+'Note" rows="2" placeholder="메모 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
+      +'<textarea class="note-input" id="m'+id+'Note" rows="2" placeholder="메모 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
       +'<button class="entry-add-btn" style="background:'+color+';" onclick="saveModalManual(\''+cat+'\')">저장</button>';
     const el=document.getElementById(chipsId);
     const selSet=cat==='patrol'?selectedPatrolPersons:selectedCctvPersons;
     selSet.clear();
     el.innerHTML=personnel.map(p=>'<div class="person-chip" onclick="toggleModalManualPerson(\''+cat+'\',\''+escapeHtml(p.name)+'\',this)">'+escapeHtml(p.name)+'</div>').join('');
     makeTimePicker(sid);makeTimePicker(eid);
+  }else if(cat==='other'){
+    // 기타·특이사항 수기
+    content.innerHTML='<div class="insp-modal-title" style="color:'+color+'">기타·특이사항 수기 입력</div>'
+      +'<div class="card-title">내용 <span style="font-weight:400;font-size:11px;color:#999;">(무슨 일이 발생했나요?)</span></div>'
+      +'<input type="text" id="mOtherTitle" placeholder="예: 정문 잠금장치 이상, 낯선 차량 등" style="width:100%;padding:10px 14px;border:1.5px solid #e65100;border-radius:12px;font-size:14px;background:var(--bg-input,#1a1f2b);color:var(--text-primary,#e6edf3);font-family:\'Noto Sans KR\';margin-top:6px;box-sizing:border-box;">'
+      +'<div style="margin-top:12px;"><div class="card-title">발생 시각</div><div id="mOtherTp" style="margin-top:6px;"></div></div>'
+      +'<textarea class="note-input" id="mOtherNote" rows="3" placeholder="상세 내용 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
+      +'<button class="entry-add-btn" style="background:#e65100;" onclick="saveManualOther()">저장</button>';
+    makeTimePicker('mOtherTp');
   }else{
     // 인수인계 수기 = 기존 풀폼
     selectedHvReceiver.clear();selectedHvGiver='';
@@ -1116,6 +1128,16 @@ async function saveManualCCTV(){
   events.push(ev);
   if(await saveEvents()){toast(person+' CCTV 수기 등록');renderTimeline();renderInspectionBoard();inspCategory=null;selectedCctvPersons.clear();renderInspForm();}
   else{events.pop();toast('저장 실패.');};
+}
+async function saveManualOther(){
+  const title=document.getElementById('mOtherTitle').value.trim();
+  if(!title){toast('내용을 입력하세요');return;}
+  const timeV=getTimePicker('mOtherTp');
+  const note=document.getElementById('mOtherNote').value.trim();
+  const ev={time:timeV,type:'other',action:'note',subject:title,note,manual:true};
+  events.push(ev);
+  if(await saveEvents()){toast('특이사항 기록 완료');renderTimeline();closeInspModal();}
+  else{events.pop();toast('저장 실패.');}
 }
 async function saveManualEntry(){
   const person=document.getElementById('mEntryPerson').value.trim();
