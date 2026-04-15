@@ -1495,6 +1495,48 @@ body.theme-light .entry-add-card {
   transform: scale(0.95);
 }
 
+/* ── 타임라인 수기 입력 버튼 ── */
+.tl-manual-fab {
+  background: var(--accent-green);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(52,168,83,0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+}
+.tl-manual-fab:active { transform: scale(0.9); }
+.tl-manual-fab .material-icons-round { font-size: 18px; }
+
+/* ── 수기 입력 모달 공통 인풋 ── */
+.tl-manual-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 12px;
+  font-size: 14px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: 'Noto Sans KR', sans-serif;
+  box-sizing: border-box;
+}
+.tl-manual-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 12px;
+  font-size: 14px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
 @keyframes inspBtnIn {
   from { opacity: 0; transform: translateY(24px) scale(0.9); }
   to { opacity: 1; transform: translateY(0) scale(1); }
