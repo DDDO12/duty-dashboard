@@ -1404,31 +1404,41 @@ body.theme-light .entry-add-card {
 }
 
 /* ── Inspection Fullscreen ── */
+/* ── 점검 페이지 고정 레이아웃 ── */
+#page-inspection.page.active {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  /* header(56) + date-nav(56) + bottom-nav(72) */
+  height: calc(100dvh - 184px);
+}
 .insp-fullscreen {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 160px);
-  padding: 24px 16px;
+  padding: 20px 16px;
   text-align: center;
+  overflow: hidden;
 }
 .insp-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 16px;
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
 }
 
 .insp-big-btn {
   width: 100%;
   max-width: 100%;
-  height: 90px;
-  border-radius: 20px;
+  height: 120px;
+  border-radius: 24px;
   border: none;
   color: #fff;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.3px;
   white-space: nowrap;
@@ -1437,7 +1447,7 @@ body.theme-light .entry-add-card {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   padding: 0 8px;
   transition: filter 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0;
@@ -1469,7 +1479,7 @@ body.theme-light .entry-add-card {
 .insp-big-btn:nth-child(4) { animation-delay: 0.32s; }
 
 .insp-big-btn .material-icons-round {
-  font-size: 28px;
+  font-size: 40px;
   opacity: 0.95;
 }
 
