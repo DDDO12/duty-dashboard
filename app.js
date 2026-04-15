@@ -849,26 +849,30 @@ function showStopwatch(name,label,color,timerId){
   _swTimerId=timerId||null;
   const content=document.getElementById('inspModalContent');
   const startMs=Date.now();
-  const lockBtn=_swLocked
-    ?'<button class="sw-stop-btn" style="background:#78909c;" id="swLockBtn" onclick="toggleSwLock()"><span class="material-icons-round" style="font-size:28px;color:#fff;">lock_open</span></button>'
-    :'<button class="sw-stop-btn" style="background:#78909c;" id="swLockBtn" onclick="toggleSwLock()"><span class="material-icons-round" style="font-size:28px;color:#fff;">lock_open</span></button>';
-  content.innerHTML='<div class="sw-label" style="color:'+color+'">'+label+'</div>'
-    +'<div class="sw-subject">'+escapeHtml(name)+'</div>'
-    +'<div class="sw-display" id="swTime">00:00</div>'
-    +'<textarea id="swMemoInput" class="sw-memo-input" placeholder="메모 (선택)"></textarea>'
-    +'<div style="display:flex;justify-content:center;gap:20px;margin-top:8px;">'
-      +'<button class="sw-stop-btn" style="background:'+color+';" id="swStopBtn" onclick="closeStopwatch()">중지</button>'
-      +lockBtn
-    +'</div>'
-    +'<div id="swLockOverlay" style="position:absolute;inset:0;background:rgba(0,0,0,0.7);border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;">'
+  // 잠금 필요할 때만 오버레이 HTML 포함
+  const overlayHtml=_swLocked
+    ?'<div id="swLockOverlay" style="position:absolute;inset:0;background:rgba(0,0,0,0.7);border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;">'
       +'<span class="material-icons-round" id="lockIcon" style="font-size:48px;color:#fff;margin-bottom:8px;cursor:pointer;user-select:none;">lock</span>'
       +'<span style="color:#fff;font-size:14px;margin-bottom:12px;">5초 동안 꾹 눌러 잠금 해제</span>'
       +'<div style="width:60%;height:6px;background:rgba(255,255,255,0.2);border-radius:3px;overflow:hidden;">'
         +'<div id="lockProgress" style="width:0%;height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;"></div>'
       +'</div>'
-    +'</div>';
+    +'</div>'
+    :'';
+  const lockToggleBtn=_swLocked
+    ?'<button class="sw-stop-btn" style="background:#78909c;" id="swLockBtn" onclick="toggleSwLock()"><span class="material-icons-round" style="font-size:28px;color:#fff;">lock_open</span></button>'
+    :'';
+  content.innerHTML='<div class="sw-label" style="color:'+color+'">'+label+'</div>'
+    +'<div class="sw-subject">'+escapeHtml(name)+'</div>'
+    +'<div class="sw-display" id="swTime">00:00</div>'
+    +'<textarea id="swMemoInput" class="sw-memo-input" placeholder="메모 (선택)"></textarea>'
+    +'<div style="display:flex;justify-content:center;gap:20px;margin-top:8px;">'
+      +'<button class="sw-stop-btn" style="background:'+color+';" id="swStopBtn" '+(  _swLocked?'disabled style="background:'+color+';opacity:0.4;cursor:not-allowed;"':''  )+' onclick="closeStopwatch()">중지</button>'
+      +lockToggleBtn
+    +'</div>'
+    +overlayHtml;
   content.style.position='relative';
-  // 잠금 오버레이 이벤트 바인딩
+  // 잠금 상태면 오버레이 이벤트 바인딩
   renderLockOverlay();
   clearInterval(_swInterval);
   _swInterval=setInterval(()=>{
