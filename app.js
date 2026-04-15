@@ -123,11 +123,10 @@ function dateShift(base,delta){
 function updateDateLabel(){
   const d=new Date(viewDate+'T00:00:00');
   const wd=['일','월','화','수','목','금','토'][d.getDay()];
-  const today=todayLocal();
+  const m=d.getMonth()+1;
+  const day=d.getDate();
   const label=document.getElementById('dateLabel');
-  let text=viewDate+' ('+wd+')';
-  if(viewDate===today) text='오늘 '+text;
-  label.textContent=text;
+  label.textContent=m+'월 '+day+'일 ('+wd+')';
   label.className='current-date'+(datesWithData.has(viewDate)?' has-data':'');
 }
 function prevDay(){viewDate=dateShift(viewDate,-1);updateDateLabel();loadEvents();}
