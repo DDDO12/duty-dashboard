@@ -35,7 +35,7 @@
       <h1>실시사항</h1>
       <div class="date" id="todayDate"></div>
     </div>
-    <span class="build-tag">V30</span>
+    <span class="build-tag">V32</span>
     <button class="sync-btn" onclick="syncToMaru()"><span class="material-icons-round">sync</span> 동기화</button>
     <button class="header-icon-btn" onclick="openSettingsPage()"><span class="material-icons-round">settings</span></button>
   </div>
@@ -74,100 +74,114 @@
   </div>
 
   <div class="page" id="page-entry-keys">
-    <div class="entry-add-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('entry')">
-        <span class="card-title" style="margin:0;">+ 새 출입 기록</span>
-        <span class="material-icons-round" id="entryToggleIcon" style="color:var(--accent-green);font-size:20px;">expand_more</span>
-      </div>
-      <div id="entryAddBody" style="display:none;margin-top:12px;">
-        <div class="card-title">유형 선택</div>
-        <div class="type-selector" id="entryTypes" style="margin-top:8px;"></div>
-        <div class="card-title" style="margin-top:16px;">액션 선택</div>
-        <div class="type-selector" id="entryActionChips" style="margin-top:8px;"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
-          <div>
-            <div class="card-title">대상자 1</div>
-            <div class="person-selector" id="entryPersonChips1" style="flex-direction:column;"></div>
+    <!-- 서브 탭 -->
+    <div class="cal-sub-tabs">
+      <button class="cal-sub-tab active" id="subTabEntry" onclick="switchEntryTab('entry')">
+        <span class="material-icons-round">door_front</span> 출입
+      </button>
+      <button class="cal-sub-tab" id="subTabKey" onclick="switchEntryTab('key')">
+        <span class="material-icons-round">key</span> 열쇠
+      </button>
+    </div>
+
+    <!-- 출입 패널 -->
+    <div id="entryPanel">
+      <div class="entry-add-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('entry')">
+          <span class="card-title" style="margin:0;">+ 새 출입 기록</span>
+          <span class="material-icons-round" id="entryToggleIcon" style="color:var(--accent-green);font-size:20px;">expand_more</span>
+        </div>
+        <div id="entryAddBody" style="display:none;margin-top:12px;">
+          <div class="card-title">유형 선택</div>
+          <div class="type-selector" id="entryTypes" style="margin-top:8px;"></div>
+          <div class="card-title" style="margin-top:16px;">액션 선택</div>
+          <div class="type-selector" id="entryActionChips" style="margin-top:8px;"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
+            <div>
+              <div class="card-title">대상자 1</div>
+              <div class="person-selector" id="entryPersonChips1" style="flex-direction:column;"></div>
+            </div>
+            <div>
+              <div class="card-title">대상자 2</div>
+              <div class="person-selector" id="entryPersonChips2" style="flex-direction:column;"></div>
+            </div>
           </div>
-          <div>
-            <div class="card-title">대상자 2</div>
-            <div class="person-selector" id="entryPersonChips2" style="flex-direction:column;"></div>
+          <button onclick="createEntry();toggleAddForm('entry')" class="entry-add-btn" style="margin-top:16px;">저장</button>
+        </div>
+      </div>
+      <div class="entry-add-card" style="margin-top:0;border:1.5px dashed #d0d7e0;background:#fafbfc;">
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('manual-entry')">
+          <span class="card-title" style="margin:0;color:#666;">✏️ 출입 수기 입력</span>
+          <span class="material-icons-round" id="manualEntryIcon" style="color:var(--accent-green);font-size:20px;">expand_more</span>
+        </div>
+        <div id="manualEntryBody" style="display:none;margin-top:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div><div class="card-title">대상자</div><input type="text" id="mEntryPerson" placeholder="이름" style="width:100%;padding:10px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;box-sizing:border-box;"></div>
+            <div><div class="card-title">유형</div><input type="text" id="mEntryLoc" placeholder="탄약고·무기고…" style="width:100%;padding:10px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;box-sizing:border-box;"></div>
+          </div>
+          <div class="card-title" style="margin-top:10px;">액션</div>
+          <select id="mEntryAction" style="width:100%;padding:10px 14px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;">
+            <option value="입장">입장</option><option value="퇴장">퇴장</option><option value="외출">외출</option><option value="복귀">복귀</option>
+          </select>
+          <div class="card-title" style="margin-top:10px;">시각</div>
+          <div id="mEntryTimeTp" style="margin-top:4px;"></div>
+          <textarea class="note-input" id="mEntryNote" rows="2" placeholder="메모 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>
+          <button class="entry-add-btn" onclick="saveManualEntry()">저장</button>
+        </div>
+      </div>
+      <div class="card-title" style="padding:0 4px;">진행 중인 출입</div>
+      <div class="entry-board" id="entryBoard"></div>
+    </div>
+
+    <!-- 열쇠 패널 -->
+    <div id="keyPanel" style="display:none;">
+      <div class="entry-add-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('key')">
+          <span class="card-title" style="margin:0;">+ 열쇠 기록</span>
+          <span class="material-icons-round" id="keyToggleIcon" style="color:var(--accent-amber);font-size:20px;">expand_more</span>
+        </div>
+        <div id="keyAddBody" style="display:none;margin-top:12px;">
+          <div class="card-title">인계자</div>
+          <div class="person-selector" id="handoverChips" style="margin-top:8px;margin-bottom:16px;"></div>
+          <div class="card-title">인수자</div>
+          <div id="keyPersonSelector" style="margin-bottom:12px;"></div>
+          <div class="card-title">열쇠 그룹</div>
+          <div class="preset-grid" id="keyPresets" style="margin-top:8px;"></div>
+          <div class="card-title" style="margin-top:10px;">세부 키 선택</div>
+          <div class="person-selector key-detail-list" id="keyDetails" style="margin-top:8px;"></div>
+          <div class="key-summary-box" id="keySelectionSummary"></div>
+          <div class="card-title" style="margin-top:14px;">현재 보유 중 키</div>
+          <div class="person-selector key-detail-list" id="keyHeldDetails" style="margin-top:8px;"></div>
+          <div class="key-summary-box" id="keyReturnSummary"></div>
+          <div class="key-actions">
+            <button id="btnKeyIssue" style="background:var(--accent-amber);opacity:0.4;cursor:not-allowed;" onclick="addKey('issue')" disabled>수령</button>
+            <button id="btnKeyReturn" style="background:var(--accent-teal);opacity:0.4;cursor:not-allowed;" onclick="addKey('return')" disabled>반납</button>
           </div>
         </div>
-        <button onclick="createEntry();toggleAddForm('entry')" class="entry-add-btn" style="margin-top:16px;">저장</button>
       </div>
-    </div>
-    <div class="entry-add-card" style="margin-top:0;border:1.5px dashed #d0d7e0;background:#fafbfc;">
-      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('manual-entry')">
-        <span class="card-title" style="margin:0;color:#666;">✏️ 출입 수기 입력</span>
-        <span class="material-icons-round" id="manualEntryIcon" style="color:var(--accent-green);font-size:20px;">expand_more</span>
-      </div>
-      <div id="manualEntryBody" style="display:none;margin-top:12px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div><div class="card-title">대상자</div><input type="text" id="mEntryPerson" placeholder="이름" style="width:100%;padding:10px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;box-sizing:border-box;"></div>
-          <div><div class="card-title">유형</div><input type="text" id="mEntryLoc" placeholder="탄약고·무기고…" style="width:100%;padding:10px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;box-sizing:border-box;"></div>
+      <div class="entry-add-card" style="margin-top:0;border:1.5px dashed #d0d7e0;background:#fafbfc;">
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('manual-key')">
+          <span class="card-title" style="margin:0;color:#666;">✏️ 열쇠 수기 입력</span>
+          <span class="material-icons-round" id="manualKeyIcon" style="color:var(--accent-amber);font-size:20px;">expand_more</span>
         </div>
-        <div class="card-title" style="margin-top:10px;">액션</div>
-        <select id="mEntryAction" style="width:100%;padding:10px 14px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;">
-          <option value="입장">입장</option><option value="퇴장">퇴장</option><option value="외출">외출</option><option value="복귀">복귀</option>
-        </select>
-        <div class="card-title" style="margin-top:10px;">시각</div>
-        <div id="mEntryTimeTp" style="margin-top:4px;"></div>
-        <textarea class="note-input" id="mEntryNote" rows="2" placeholder="메모 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>
-        <button class="entry-add-btn" onclick="saveManualEntry()">저장</button>
-      </div>
-    </div>
-    <div class="card-title" style="padding:0 4px;">진행 중인 출입</div>
-    <div class="entry-board" id="entryBoard"></div>
-    <div style="margin:20px 0 12px;font-size:12px;font-weight:700;color:var(--accent-amber);letter-spacing:1px;padding:0 4px;display:flex;align-items:center;gap:8px;">
-      <span class="material-icons-round" style="font-size:18px;">key</span> 열쇠 관리
-    </div>
-    <div class="entry-add-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('key')">
-        <span class="card-title" style="margin:0;">+ 열쇠 기록</span>
-        <span class="material-icons-round" id="keyToggleIcon" style="color:var(--accent-amber);font-size:20px;">expand_more</span>
-      </div>
-      <div id="keyAddBody" style="display:none;margin-top:12px;">
-        <div class="card-title">인계자</div>
-        <div class="person-selector" id="handoverChips" style="margin-top:8px;margin-bottom:16px;"></div>
-        <div class="card-title">인수자</div>
-        <div id="keyPersonSelector" style="margin-bottom:12px;"></div>
-        <div class="card-title">열쇠 그룹</div>
-        <div class="preset-grid" id="keyPresets" style="margin-top:8px;"></div>
-        <div class="card-title" style="margin-top:10px;">세부 키 선택</div>
-        <div class="person-selector key-detail-list" id="keyDetails" style="margin-top:8px;"></div>
-        <div class="key-summary-box" id="keySelectionSummary"></div>
-        <div class="card-title" style="margin-top:14px;">현재 보유 중 키</div>
-        <div class="person-selector key-detail-list" id="keyHeldDetails" style="margin-top:8px;"></div>
-        <div class="key-summary-box" id="keyReturnSummary"></div>
-        <div class="key-actions">
-          <button id="btnKeyIssue" style="background:var(--accent-amber);opacity:0.4;cursor:not-allowed;" onclick="addKey('issue')" disabled>수령</button>
-          <button id="btnKeyReturn" style="background:var(--accent-teal);opacity:0.4;cursor:not-allowed;" onclick="addKey('return')" disabled>반납</button>
+        <div id="manualKeyBody" style="display:none;margin-top:12px;">
+          <div class="card-title">구분</div>
+          <select id="mKeyAction" style="width:100%;padding:10px 14px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;">
+            <option value="issue">수령</option><option value="return">반납</option>
+          </select>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+            <div><div class="card-title">대상자</div><input type="text" id="mKeyPerson" placeholder="이름" style="width:100%;padding:10px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;box-sizing:border-box;"></div>
+            <div><div class="card-title">열쇠명</div><input type="text" id="mKeyName" placeholder="무기고 1번…" style="width:100%;padding:10px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;box-sizing:border-box;"></div>
+          </div>
+          <div class="card-title" style="margin-top:10px;">시각</div>
+          <div id="mKeyTimeTp" style="margin-top:4px;"></div>
+          <textarea class="note-input" id="mKeyNote" rows="2" placeholder="메모 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>
+          <button class="entry-add-btn" style="background:var(--accent-amber);color:#fff;" onclick="saveManualKey()">저장</button>
         </div>
       </div>
+      <div class="card-title" style="padding:0 4px;">오늘 열쇠 기록</div>
+      <div class="entry-board" id="keyBoard"></div>
     </div>
-    <div class="entry-add-card" style="margin-top:0;border:1.5px dashed #d0d7e0;background:#fafbfc;">
-      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('manual-key')">
-        <span class="card-title" style="margin:0;color:#666;">✏️ 열쇠 수기 입력</span>
-        <span class="material-icons-round" id="manualKeyIcon" style="color:var(--accent-amber);font-size:20px;">expand_more</span>
-      </div>
-      <div id="manualKeyBody" style="display:none;margin-top:12px;">
-        <div class="card-title">구분</div>
-        <select id="mKeyAction" style="width:100%;padding:10px 14px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;">
-          <option value="issue">수령</option><option value="return">반납</option>
-        </select>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
-          <div><div class="card-title">대상자</div><input type="text" id="mKeyPerson" placeholder="이름" style="width:100%;padding:10px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;box-sizing:border-box;"></div>
-          <div><div class="card-title">열쇠명</div><input type="text" id="mKeyName" placeholder="무기고 1번…" style="width:100%;padding:10px;border:1px solid #d0d7e0;border-radius:10px;font-size:14px;background:#f8f8f8;font-family:'Noto Sans KR';margin-top:6px;box-sizing:border-box;"></div>
-        </div>
-        <div class="card-title" style="margin-top:10px;">시각</div>
-        <div id="mKeyTimeTp" style="margin-top:4px;"></div>
-        <textarea class="note-input" id="mKeyNote" rows="2" placeholder="메모 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>
-        <button class="entry-add-btn" style="background:var(--accent-amber);color:#fff;" onclick="saveManualKey()">저장</button>
-      </div>
-    </div>
-    <div class="card-title" style="padding:0 4px;">오늘 열쇠 기록</div>
-    <div class="entry-board" id="keyBoard"></div>
   </div>
 
   <div class="page" id="page-inspection">
@@ -175,32 +189,43 @@
   </div>
 
   <div class="page" id="page-overtime-cal">
-    <div style="margin:0 0 12px;font-size:12px;font-weight:700;color:var(--accent-teal);letter-spacing:1px;padding:0 4px;display:flex;align-items:center;gap:8px;">
-      <span class="material-icons-round" style="font-size:18px;">calendar_month</span> 월간 캘린더
+    <!-- 서브 탭 -->
+    <div class="cal-sub-tabs">
+      <button class="cal-sub-tab active" id="subTabCal" onclick="switchCalTab('cal')">
+        <span class="material-icons-round">calendar_month</span> 월간 캘린더
+      </button>
+      <button class="cal-sub-tab" id="subTabOt" onclick="switchCalTab('ot')">
+        <span class="material-icons-round">more_time</span> 초과근무
+      </button>
     </div>
-    <div id="calendarArea"></div>
-    <div style="margin:20px 0 12px;font-size:12px;font-weight:700;color:var(--status-error);letter-spacing:1px;padding:0 4px;display:flex;align-items:center;gap:8px;">
-      <span class="material-icons-round" style="font-size:18px;">more_time</span> 초과근무
+
+    <!-- 캘린더 패널 -->
+    <div id="calPanel">
+      <div id="calendarArea"></div>
     </div>
-    <div class="entry-add-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('ot')">
-        <span class="card-title" style="margin:0;">+ 새 초과근무</span>
-        <span class="material-icons-round" id="otToggleIcon" style="color:var(--status-error);font-size:20px;">expand_more</span>
+
+    <!-- 초과근무 패널 -->
+    <div id="otPanel" style="display:none;">
+      <div class="entry-add-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('ot')">
+          <span class="card-title" style="margin:0;">+ 새 초과근무</span>
+          <span class="material-icons-round" id="otToggleIcon" style="color:var(--status-error);font-size:20px;">expand_more</span>
+        </div>
+        <div id="otAddBody" style="display:none;margin-top:12px;">
+          <div class="card-title">대상자 선택 (복수 가능)</div>
+          <div class="person-selector" id="otPersonChips" style="margin-top:8px;"></div>
+          <div class="card-title" style="margin-top:14px;">기준시간 <span style="font-weight:400;font-size:11px;color:#999;">(초과 시작 시각)</span></div>
+          <div id="otBaseTp" style="margin-top:4px;"></div>
+          <div class="card-title" style="margin-top:12px;">종료시각 <span style="font-weight:400;font-size:11px;color:#999;">(실제 종료 또는 현재)</span></div>
+          <div id="otEndTp" style="margin-top:4px;"></div>
+          <textarea class="note-input" id="otNote" rows="2" placeholder="사유 (선택)" style="margin-top:12px;margin-bottom:12px;"></textarea>
+          <button class="entry-add-btn" style="background:var(--status-error);" onclick="createOT()">+ 초과근무 등록</button>
+        </div>
       </div>
-      <div id="otAddBody" style="display:none;margin-top:12px;">
-        <div class="card-title">대상자 선택 (복수 가능)</div>
-        <div class="person-selector" id="otPersonChips" style="margin-top:8px;"></div>
-        <div class="card-title" style="margin-top:14px;">기준시간 <span style="font-weight:400;font-size:11px;color:#999;">(초과 시작 시각)</span></div>
-        <div id="otBaseTp" style="margin-top:4px;"></div>
-        <div class="card-title" style="margin-top:12px;">종료시각 <span style="font-weight:400;font-size:11px;color:#999;">(실제 종료 또는 현재)</span></div>
-        <div id="otEndTp" style="margin-top:4px;"></div>
-        <textarea class="note-input" id="otNote" rows="2" placeholder="사유 (선택)" style="margin-top:12px;margin-bottom:12px;"></textarea>
-        <button class="entry-add-btn" style="background:var(--status-error);" onclick="createOT()">+ 초과근무 등록</button>
-      </div>
+      <div class="ot-summary-strip"><div id="otTodayTotal">당일 누적 00:00</div><div id="otActiveCount">진행 중 0건</div></div>
+      <div class="card-title" style="padding:0 4px;">진행/완료 초과근무</div>
+      <div class="entry-board" id="otBoard"></div>
     </div>
-    <div class="ot-summary-strip"><div id="otTodayTotal">당일 누적 00:00</div><div id="otActiveCount">진행 중 0건</div></div>
-    <div class="card-title" style="padding:0 4px;">진행/완료 초과근무</div>
-    <div class="entry-board" id="otBoard"></div>
   </div>
 
   <div class="page" id="page-settings">

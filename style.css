@@ -1489,6 +1489,32 @@ body.theme-light .entry-add-card {
   box-shadow: 0 4px 12px rgba(0, 151, 167, 0.3);
 }
 
+/* 완료된 점검 버튼 */
+.insp-big-btn.done {
+  opacity: 0.45;
+  filter: grayscale(60%);
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+  position: relative;
+}
+.insp-big-btn.done:hover { filter: grayscale(60%); transform: none; }
+.insp-done-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0,0,0,0.35);
+  border-radius: 20px;
+  padding: 2px 7px 2px 4px;
+}
+.insp-done-badge .material-icons-round { font-size: 13px; }
+
 .insp-manual-btn {
   opacity: 0;
   animation: inspBtnIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
@@ -2053,6 +2079,35 @@ body.theme-light .entry-add-card {
 .key-summary-empty {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+/* ── 캘린더/초과근무 서브탭 ── */
+.cal-sub-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 12px 0;
+}
+.cal-sub-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 0;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.cal-sub-tab .material-icons-round { font-size: 18px; }
+.cal-sub-tab.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
 }
 
 .ot-summary-strip {

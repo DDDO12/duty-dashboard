@@ -817,6 +817,12 @@ function selectInspMode(mode){
 }
 function renderInspForm(){
   const area=document.getElementById('inspFormArea');if(!area)return;
+  // 오늘 완료 여부 체크
+  const done={
+    patrol: events.some(e=>e.type==='patrol'&&(e.action==='stop'||e.manual)),
+    cctv:   events.some(e=>e.type==='cctv'&&(e.action==='stop'||e.manual)),
+    handover:events.some(e=>e.type==='handover'&&e.action==='complete')
+  };
   const CATS=[
     {id:'patrol',   label:'순찰',   color:'#34a853', icon:'directions_walk'},
     {id:'cctv',     label:'CCTV',   color:'#9334e6', icon:'videocam'},
@@ -825,9 +831,11 @@ function renderInspForm(){
   ];
   area.innerHTML='<div class="insp-grid">'
     +CATS.map((c,i)=>{
-      const onclick=c.id==='manual'?"openManualInspModal()":`openInspModal('${c.id}')`;
-      return '<button class="insp-big-btn" style="background:'+c.color+';animation-delay:'+(i*0.08+0.08)+'s;" onclick="'+onclick+'">'
-        +'<span class="material-icons-round">'+c.icon+'</span>'+c.label+'</button>';
+      const isDone=done[c.id]||false;
+      const onclick=isDone?'':(c.id==='manual'?"openManualInspModal()":`openInspModal('${c.id}')`);
+      const doneOverlay=isDone?'<span class="insp-done-badge"><span class="material-icons-round">check_circle</span> 완료</span>':'';
+      return '<button class="insp-big-btn'+(isDone?' done':'')+'" style="background:'+c.color+';animation-delay:'+(i*0.08+0.08)+'s;"'+(onclick?' onclick="'+onclick+'"':'')+' '+(isDone?'disabled':'')+' >'
+        +'<span class="material-icons-round">'+c.icon+'</span>'+c.label+doneOverlay+'</button>';
     }).join('')
     +'</div>';
 }
@@ -1634,6 +1642,20 @@ function renderOTSummary(){
   const active=document.getElementById('otActiveCount');
   if(total) total.textContent='당일 누적 '+formatHourMinute(getOtTodayTotalMs()/60000);
   if(active) active.textContent='진행 중 '+otSessions.filter(s=>!s.end_time).length+'건';
+}
+function switchEntryTab(tab){
+  document.getElementById('entryPanel').style.display=tab==='entry'?'':'none';
+  document.getElementById('keyPanel').style.display=tab==='key'?'':'none';
+  document.getElementById('subTabEntry').classList.toggle('active',tab==='entry');
+  document.getElementById('subTabKey').classList.toggle('active',tab==='key');
+  if(tab==='key'){renderKeyBoard();renderKeyPersonSelector();renderKeyPresets();renderKeyDetailSelector();renderHeldKeySelector();}
+}
+function switchCalTab(tab){
+  document.getElementById('calPanel').style.display=tab==='cal'?'':'none';
+  document.getElementById('otPanel').style.display=tab==='ot'?'':'none';
+  document.getElementById('subTabCal').classList.toggle('active',tab==='cal');
+  document.getElementById('subTabOt').classList.toggle('active',tab==='ot');
+  if(tab==='ot'){renderOTBoard();renderOTSummary();}
 }
 function renderOTBoard(){
   const board=document.getElementById('otBoard');if(!board)return;
