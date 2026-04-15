@@ -1865,13 +1865,20 @@ function renderCalendar(){
 
   function getOtForDate(day){
     const dateStr=year+'-'+String(month+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
-    const otEvents=events.filter(e=>e.date===dateStr&&e.category==='overtime');
-    return otEvents.length;
+    try{const ot=JSON.parse(localStorage.getItem('overtime_'+dateStr)||'[]');return Array.isArray(ot)?ot.length:0;}catch(e){return 0;}
   }
 
   function hasEvents(day){
     const dateStr=year+'-'+String(month+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
-    return events.some(e=>e.date===dateStr);
+    return datesWithData.has(dateStr);
+  }
+
+  // 이번 달 전체 초과근무 세션 수집
+  const monthStr=year+'-'+String(month+1).padStart(2,'0');
+  const allMonthOt=[];
+  for(let d=1;d<=lastDate;d++){
+    const ds=monthStr+'-'+String(d).padStart(2,'0');
+    try{const ot=JSON.parse(localStorage.getItem('overtime_'+ds)||'[]');if(Array.isArray(ot))ot.forEach(s=>allMonthOt.push({...s,date:ds}));}catch(e){}
   }
 
   const monthNames=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -1940,13 +1947,29 @@ function renderCalendar(){
   // 이번 달 초과근무 요약
   html+='<div class="cal-ot-summary">';
   html+='<div class="card-title"><span class="material-icons-round" style="font-size:16px;vertical-align:middle;">more_time</span> 이번 달 초과근무 요약</div>';
-  const monthStr=year+'-'+String(month+1).padStart(2,'0');
-  const monthOt=events.filter(e=>e.date&&e.date.startsWith(monthStr)&&e.category==='overtime');
-  if(monthOt.length){
-    html+='<div class="cal-ot-list">';
-    monthOt.forEach(e=>{
-      html+='<div class="cal-ot-row"><span class="cal-ot-date">'+e.date.slice(5)+'</span><span class="cal-ot-desc">'+e.desc+'</span></div>';
+  if(allMonthOt.length){
+    // 날짜·사람별 누적 시간 계산
+    const byPerson={};
+    allMonthOt.forEach(s=>{
+      const diff=s.start_time&&s.end_time?Math.max(0,parseClockToMinutes(s.end_time)-parseClockToMinutes(s.start_time)):0;
+      const names=(s.subject||'').split(',').map(n=>n.trim()).filter(Boolean);
+      names.forEach(n=>{byPerson[n]=(byPerson[n]||0)+diff;});
     });
+    html+='<div class="cal-ot-list">';
+    allMonthOt.sort((a,b)=>a.date.localeCompare(b.date)).forEach(s=>{
+      const diff=s.start_time&&s.end_time?Math.max(0,parseClockToMinutes(s.end_time)-parseClockToMinutes(s.start_time)):0;
+      html+='<div class="cal-ot-row">'
+        +'<span class="cal-ot-date">'+s.date.slice(5)+'</span>'
+        +'<span class="cal-ot-desc">'+escapeHtml(s.subject||'')+'</span>'
+        +'<span class="cal-ot-time">'+formatHourMinute(diff)+'</span>'
+        +'</div>';
+    });
+    // 인원별 합계
+    html+='<div class="cal-ot-totals">';
+    Object.entries(byPerson).forEach(([name,mins])=>{
+      html+='<div class="cal-ot-total-row"><span>'+escapeHtml(name)+'</span><span class="cal-ot-total-val">합계 '+formatHourMinute(mins)+'</span></div>';
+    });
+    html+='</div>';
     html+='</div>';
   } else {
     html+='<div class="empty-state" style="padding:16px;"><span class="material-icons-round">event_available</span><p>이번 달 초과근무 기록 없음</p></div>';

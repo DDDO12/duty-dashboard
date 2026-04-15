@@ -2497,12 +2497,37 @@ body.theme-light .entry-add-card {
 }
 .cal-ot-row {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   font-size: 13px;
   color: var(--text-primary);
   padding: 6px 8px;
   background: var(--bg-input);
   border-radius: 8px;
+  align-items: center;
+}
+.cal-ot-time {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--status-error);
+}
+.cal-ot-totals {
+  margin-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cal-ot-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 4px 8px;
+}
+.cal-ot-total-val {
+  font-weight: 700;
+  color: var(--status-error);
 }
 .cal-ot-date {
   font-weight: 700;
