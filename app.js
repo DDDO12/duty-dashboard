@@ -1022,11 +1022,14 @@ function openManualForm(cat){
     // 기타·특이사항 수기
     content.innerHTML='<div class="insp-modal-title" style="color:'+color+'">기타·특이사항 수기 입력</div>'
       +'<div class="card-title">내용 <span style="font-weight:400;font-size:11px;color:#999;">(무슨 일이 발생했나요?)</span></div>'
-      +'<input type="text" id="mOtherTitle" placeholder="예: 정문 잠금장치 이상, 낯선 차량 등" style="width:100%;padding:10px 14px;border:1.5px solid #e65100;border-radius:12px;font-size:14px;background:var(--bg-input,#1a1f2b);color:var(--text-primary,#e6edf3);font-family:\'Noto Sans KR\';margin-top:6px;box-sizing:border-box;">'
-      +'<div style="margin-top:12px;"><div class="card-title">발생 시각</div><div id="mOtherTp" style="margin-top:6px;"></div></div>'
-      +'<textarea class="note-input" id="mOtherNote" rows="3" placeholder="상세 내용 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
+      +'<input type="text" id="mOtherTitle" placeholder="예: 정문 잠금장치 이상, 낯선 차량 등" class="tl-manual-input" style="margin-top:6px;border-color:#e65100;">'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">'
+        +'<div><div class="card-title">시작 시각</div><div id="mOtherStartTp" style="margin-top:4px;"></div></div>'
+        +'<div><div class="card-title">종료 시각</div><div id="mOtherEndTp" style="margin-top:4px;"></div></div>'
+      +'</div>'
+      +'<textarea class="note-input" id="mOtherNote" rows="2" placeholder="상세 내용 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
       +'<button class="entry-add-btn" style="background:#e65100;" onclick="saveManualOther()">저장</button>';
-    makeTimePicker('mOtherTp');
+    makeTimePicker('mOtherStartTp');makeTimePicker('mOtherEndTp');
   }else{
     // 인수인계 수기 = 기존 풀폼
     selectedHvReceiver.clear();selectedHvGiver='';
@@ -1135,9 +1138,14 @@ async function saveManualCCTV(){
 async function saveManualOther(){
   const title=document.getElementById('mOtherTitle').value.trim();
   if(!title){toast('내용을 입력하세요');return;}
-  const timeV=getTimePicker('mOtherTp');
+  const startEl=document.getElementById('mOtherStartTp');
+  const endEl=document.getElementById('mOtherEndTp');
+  const start=startEl?getTimePicker('mOtherStartTp'):getTimePicker('mOtherTp');
+  const end=endEl?getTimePicker('mOtherEndTp'):'';
   const note=document.getElementById('mOtherNote').value.trim();
-  const ev={time:timeV,type:'other',action:'note',subject:title,note,manual:true};
+  const diff=start&&end?Math.max(0,parseClockToMinutes(end)-parseClockToMinutes(start)):0;
+  const duration=start&&end?formatHourMinute(diff):'';
+  const ev={time:end||start,type:'other',action:'note',subject:title,start_time:start,end_time:end,duration,note,manual:true};
   events.push(ev);
   if(await saveEvents()){toast('특이사항 기록 완료');renderTimeline();closeInspModal();}
   else{events.pop();toast('저장 실패.');}
@@ -1157,42 +1165,53 @@ function openTlManualModal(){
     +'</div>';
   modal.classList.add('open');
 }
+function _tlmAllPersons(){
+  return [...new Set([...personnel,...personnel2].map(p=>p.name))];
+}
+function _tlmTimeRangeHtml(startId,endId){
+  return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">'
+    +'<div><div class="card-title">시작 시각</div><div id="'+startId+'" style="margin-top:4px;"></div></div>'
+    +'<div><div class="card-title">종료 시각</div><div id="'+endId+'" style="margin-top:4px;"></div></div>'
+    +'</div>';
+}
 function openTlManualForm(cat){
   const content=document.getElementById('inspModalContent');
   const colors={entry:'#4285f4',key:'#f9ab00',patrol:'#34a853',cctv:'#9334e6',handover:'#0097a7',other:'#e65100'};
   const labels={entry:'출입',key:'열쇠',patrol:'순찰',cctv:'CCTV',handover:'인수인계',other:'기타·특이사항'};
   const color=colors[cat], label=labels[cat];
+  const allPersons=_tlmAllPersons();
   if(cat==='entry'){
     content.innerHTML='<div class="insp-modal-title" style="color:'+color+'">출입 수기 입력</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-        +'<div><div class="card-title">대상자</div><input id="tlmEntryPerson" placeholder="이름" class="tl-manual-input" style="margin-top:4px;"></div>'
-        +'<div><div class="card-title">유형</div><input id="tlmEntryLoc" placeholder="탄약고·무기고…" class="tl-manual-input" style="margin-top:4px;"></div>'
-      +'</div>'
+      +'<div class="card-title">대상자</div>'
+      +'<div class="person-selector" id="tlmEntryChips" style="margin-top:6px;"></div>'
+      +'<div class="card-title" style="margin-top:10px;">유형</div>'
+      +'<input id="tlmEntryLoc" placeholder="탄약고·무기고…" class="tl-manual-input" style="margin-top:4px;">'
       +'<div class="card-title" style="margin-top:10px;">액션</div>'
       +'<select id="tlmEntryAction" class="tl-manual-select" style="margin-top:4px;"><option>입장</option><option>퇴장</option><option>외출</option><option>복귀</option></select>'
-      +'<div class="card-title" style="margin-top:10px;">시각</div><div id="tlmEntryTp" style="margin-top:4px;"></div>'
+      +_tlmTimeRangeHtml('tlmEntryStartTp','tlmEntryEndTp')
       +'<textarea id="tlmEntryNote" class="note-input" rows="2" placeholder="메모 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
       +'<button class="entry-add-btn" style="background:'+color+';" onclick="saveTlManualEntry()">저장</button>';
-    makeTimePicker('tlmEntryTp');
+    document.getElementById('tlmEntryChips').innerHTML=allPersons.map(n=>'<div class="person-chip" onclick="this.classList.toggle(\'selected\')">'+escapeHtml(n)+'</div>').join('');
+    makeTimePicker('tlmEntryStartTp');makeTimePicker('tlmEntryEndTp');
   }else if(cat==='key'){
     content.innerHTML='<div class="insp-modal-title" style="color:'+color+'">열쇠 수기 입력</div>'
       +'<div class="card-title">구분</div>'
       +'<select id="tlmKeyAction" class="tl-manual-select" style="margin-top:4px;"><option value="issue">수령</option><option value="return">반납</option></select>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">'
-        +'<div><div class="card-title">대상자</div><input id="tlmKeyPerson" placeholder="이름" class="tl-manual-input" style="margin-top:4px;"></div>'
-        +'<div><div class="card-title">열쇠명</div><input id="tlmKeyName" placeholder="무기고 1번…" class="tl-manual-input" style="margin-top:4px;"></div>'
-      +'</div>'
+      +'<div class="card-title" style="margin-top:10px;">대상자</div>'
+      +'<div class="person-selector" id="tlmKeyChips" style="margin-top:6px;"></div>'
+      +'<div class="card-title" style="margin-top:10px;">열쇠명</div>'
+      +'<input id="tlmKeyName" placeholder="무기고 1번…" class="tl-manual-input" style="margin-top:4px;">'
       +'<div class="card-title" style="margin-top:10px;">시각</div><div id="tlmKeyTp" style="margin-top:4px;"></div>'
       +'<textarea id="tlmKeyNote" class="note-input" rows="2" placeholder="메모 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
       +'<button class="entry-add-btn" style="background:'+color+';" onclick="saveTlManualKey()">저장</button>';
+    document.getElementById('tlmKeyChips').innerHTML=allPersons.map(n=>'<div class="person-chip" onclick="tlmKeySelectOne(this)">'+escapeHtml(n)+'</div>').join('');
     makeTimePicker('tlmKeyTp');
   }else if(cat==='patrol'||cat==='cctv'){
     const id=cat==='patrol'?'Patrol':'Cctv';
     content.innerHTML='<div class="insp-modal-title" style="color:'+color+'">'+label+' 수기 입력</div>'
       +'<div class="card-title">대상자</div>'
       +'<div class="person-selector" id="tlmInspChips" style="margin-top:6px;"></div>'
-      +'<div style="margin-top:10px;"><div class="card-title">시작 시각</div><div id="m'+id+'StartTp" style="margin-top:6px;"></div></div>'
-      +'<div style="margin-top:10px;"><div class="card-title">종료 시각</div><div id="m'+id+'EndTp" style="margin-top:6px;"></div></div>'
+      +_tlmTimeRangeHtml('m'+id+'StartTp','m'+id+'EndTp')
       +'<textarea class="note-input" id="m'+id+'Note" rows="2" placeholder="메모 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
       +'<button class="entry-add-btn" style="background:'+color+';" onclick="saveTlManualInsp(\''+cat+'\')">저장</button>';
     const selSet=cat==='patrol'?selectedPatrolPersons:selectedCctvPersons;
@@ -1212,11 +1231,15 @@ function openTlManualForm(cat){
     content.innerHTML='<div class="insp-modal-title" style="color:'+color+'">기타·특이사항 수기 입력</div>'
       +'<div class="card-title">내용</div>'
       +'<input id="mOtherTitle" placeholder="예: 정문 잠금장치 이상" class="tl-manual-input" style="margin-top:4px;border-color:#e65100;">'
-      +'<div style="margin-top:12px;"><div class="card-title">발생 시각</div><div id="mOtherTp" style="margin-top:6px;"></div></div>'
-      +'<textarea class="note-input" id="mOtherNote" rows="3" placeholder="상세 내용 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
+      +_tlmTimeRangeHtml('mOtherStartTp','mOtherEndTp')
+      +'<textarea class="note-input" id="mOtherNote" rows="2" placeholder="상세 내용 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
       +'<button class="entry-add-btn" style="background:#e65100;" onclick="saveManualOther()">저장</button>';
-    makeTimePicker('mOtherTp');
+    makeTimePicker('mOtherStartTp');makeTimePicker('mOtherEndTp');
   }
+}
+function tlmKeySelectOne(el){
+  document.querySelectorAll('#tlmKeyChips .person-chip').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
 }
 function toggleTlInspPerson(cat,name,chipEl){
   const s=cat==='patrol'?selectedPatrolPersons:selectedCctvPersons;
@@ -1229,20 +1252,25 @@ async function saveTlManualInsp(cat){
   closeInspModal();
 }
 async function saveTlManualEntry(){
-  const person=document.getElementById('tlmEntryPerson').value.trim();
-  if(!person){toast('대상자를 입력하세요');return;}
+  const chips=[...document.querySelectorAll('#tlmEntryChips .person-chip.selected')].map(c=>c.textContent.trim());
+  if(!chips.length){toast('대상자를 선택하세요');return;}
+  const person=chips.join(', ');
   const loc=document.getElementById('tlmEntryLoc').value.trim();
   const action=document.getElementById('tlmEntryAction').value;
-  const timeV=getTimePicker('tlmEntryTp');
+  const start=getTimePicker('tlmEntryStartTp');
+  const end=getTimePicker('tlmEntryEndTp');
   const note=document.getElementById('tlmEntryNote').value.trim();
-  const ev={time:timeV,type:'entry',action,subject:person,location:loc,note,manual:true};
+  const diff=start&&end?Math.max(0,parseClockToMinutes(end)-parseClockToMinutes(start)):0;
+  const duration=start&&end?formatHourMinute(diff):'';
+  const ev={time:end||start,type:'entry',action,subject:person,location:loc,start_time:start,end_time:end,duration,note,manual:true};
   events.push(ev);
   if(await saveEvents()){toast(person+' 출입 수기 등록');renderTimeline();closeInspModal();}
   else{events.pop();toast('저장 실패.');}
 }
 async function saveTlManualKey(){
-  const person=document.getElementById('tlmKeyPerson').value.trim();
-  if(!person){toast('대상자를 입력하세요');return;}
+  const chip=document.querySelector('#tlmKeyChips .person-chip.selected');
+  if(!chip){toast('대상자를 선택하세요');return;}
+  const person=chip.textContent.trim();
   const action=document.getElementById('tlmKeyAction').value;
   const keyName=document.getElementById('tlmKeyName').value.trim();
   const timeV=getTimePicker('tlmKeyTp');
