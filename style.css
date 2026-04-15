@@ -2295,6 +2295,11 @@ body.theme-light .entry-add-card {
   margin-left: 2px;
   vertical-align: super;
 }
+.cal-event.cctv.displaced {
+  background: rgba(147,52,230,0.3);
+  border: 1px dashed var(--accent-purple);
+  opacity: 0.9;
+}
 .cal-event.sched {
   color: #fff;
   font-size: 8px;

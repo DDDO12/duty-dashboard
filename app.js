@@ -1833,12 +1833,33 @@ function renderCalendar(){
     return Math.ceil((date.getDate()+first.getDay())/7);
   }
 
+  function _cctvForFriday(fridayDate){
+    // 금요일 날짜 객체를 받아 해당 주차의 CCTV 담당자 반환
+    if(fridayDate.getDay()!==5) return null;
+    const week=getWeekOfMonth(fridayDate);
+    if(week===1||week===3||week===5) return '대대장';
+    if(week===2||week===4) return '군수과장';
+    return null;
+  }
+  function _dateStr(d){
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
   function getCctvSchedule(day){
     const d=new Date(year,month,day);
-    if(d.getDay()!==5) return null; // 금요일만
-    const week=getWeekOfMonth(d);
-    if(week===1||week===3||week===5) return {who:'대대장',label:'CCTV점검'};
-    if(week===2||week===4) return {who:'군수과장',label:'CCTV점검'};
+    // 1) 이 날이 금요일이면
+    if(d.getDay()===5){
+      const who=_cctvForFriday(d);
+      if(!who) return null;
+      // 휴무일이면 이 날엔 표시하지 않음 (전날로 이월)
+      if(offDays.has(_dateStr(d))) return null;
+      return {who,label:'CCTV점검',displaced:false};
+    }
+    // 2) 다음 날이 금요일 + 휴무일이면 → 오늘로 이월
+    const next=new Date(year,month,day+1);
+    if(next.getDay()===5 && offDays.has(_dateStr(next))){
+      const who=_cctvForFriday(next);
+      if(who) return {who,label:'CCTV점검',displaced:true};
+    }
     return null;
   }
 
@@ -1895,7 +1916,9 @@ function renderCalendar(){
     html+='<span class="cal-date-num">'+d+(isOff?'<span class="cal-off-mark">휴</span>':'')+'</span>';
 
     if(cctv){
-      html+='<div class="cal-event cctv">'+cctv.who+'</div>';
+      const cctvCls='cal-event cctv'+(cctv.displaced?' displaced':'');
+      const cctvLabel=cctv.displaced?'↑'+cctv.who:cctv.who;
+      html+='<div class="'+cctvCls+'" title="'+(cctv.displaced?'휴무 이월':'')+'">'+cctvLabel+'</div>';
     }
     if(otCount>0){
       html+='<div class="cal-event ot">초과'+otCount+'</div>';
