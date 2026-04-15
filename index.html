@@ -31,17 +31,18 @@
 <!-- Main -->
 <div id="app" style="display:none;">
   <div class="header">
-    <div class="header-left">
-      <h1>실시사항</h1>
-      <div class="date" id="todayDate"></div>
-    </div>
-    <span class="build-tag">V36</span>
-    <button class="sync-btn" onclick="syncToMaru()"><span class="material-icons-round">sync</span> 동기화</button>
+    <h1>실시사항</h1>
     <button class="header-icon-btn" onclick="openSettingsPage()"><span class="material-icons-round">settings</span></button>
   </div>
 
   <!-- 공통 context bar: 모든 탭에서 항상 노출 -->
   <div id="contextBar">
+    <div class="date-nav">
+      <button onclick="prevDay()"><span class="material-icons-round">chevron_left</span></button>
+      <span class="current-date" id="dateLabel" onclick="openCalendar()"></span>
+      <button onclick="nextDay()"><span class="material-icons-round">chevron_right</span></button>
+      <button class="tl-manual-fab" onclick="openTlManualModal()"><span class="material-icons-round">edit</span></button>
+    </div>
     <div class="active-block" id="activeBlock" style="display:none;">
       <div class="active-block-header" onclick="toggleActiveBlock()" style="cursor:pointer;">
         <span class="live-dot"></span>
@@ -54,20 +55,6 @@
 
   <!-- Pages -->
   <div class="page active" id="page-timeline">
-    <!-- Date Nav (타임라인 전용) -->
-    <div class="date-nav">
-      <button onclick="prevDay()"><span class="material-icons-round">chevron_left</span></button>
-      <span class="current-date" id="dateLabel" onclick="openCalendar()"></span>
-      <button onclick="nextDay()"><span class="material-icons-round">chevron_right</span></button>
-      <button class="tl-manual-fab" onclick="openTlManualModal()"><span class="material-icons-round">edit</span></button>
-    </div>
-    <div class="tl-filter-bar" id="tlFilterBar">
-      <button class="tl-filter-chip active" data-type="all" onclick="setTlFilter('all')">전체</button>
-      <button class="tl-filter-chip" data-type="entry" onclick="setTlFilter('entry')">출입</button>
-      <button class="tl-filter-chip" data-type="inspection" onclick="setTlFilter('inspection')">점검</button>
-      <button class="tl-filter-chip" data-type="key" onclick="setTlFilter('key')">열쇠</button>
-      <button class="tl-filter-chip" data-type="overtime" onclick="setTlFilter('overtime')">초과근무</button>
-    </div>
     <div class="stats-row" id="statsRow"></div>
     <div id="timelineList"></div>
     <div class="empty-state" id="emptyMsg"><span class="material-icons-round">event_note</span><p>아직 기록이 없어요</p></div>
@@ -218,6 +205,7 @@
     <!-- 캘린더 패널 -->
     <div id="calPanel">
       <div id="calendarArea"></div>
+      <div id="calMonthSummary" style="display:none;"></div>
     </div>
 
     <!-- 초과근무 패널 -->
@@ -241,10 +229,17 @@
       <div class="ot-summary-strip"><div id="otTodayTotal">당일 누적 00:00</div><div id="otActiveCount">진행 중 0건</div></div>
       <div class="card-title" style="padding:0 4px;">진행/완료 초과근무</div>
       <div class="entry-board" id="otBoard"></div>
+      <div id="otMonthlySummary"></div>
     </div>
   </div>
 
   <div class="page" id="page-settings">
+    <div class="entry-add-card" style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="card-title" style="margin:0;">화면 테마</span>
+        <div id="themeToggleRow" style="display:flex;gap:8px;"></div>
+      </div>
+    </div>
     <div class="entry-add-card">
       <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s1')">
         <span class="card-title" style="margin:0;">인원 관리 (대상자 1)</span>
@@ -287,6 +282,16 @@
       </div>
     </div>
     <div class="entry-add-card" style="margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s3r')">
+        <span class="card-title" style="margin:0;">인수자 관리</span>
+        <span class="material-icons-round" id="s3r-icon" style="color:var(--accent-amber);font-size:20px;">expand_more</span>
+      </div>
+      <div id="s3r-body" style="display:none;margin-top:12px;">
+        <div id="personnel4List"></div>
+        <div class="add-row"><input id="newPerson4Name" placeholder="이름 입력"><button style="background:var(--accent-amber);" onclick="addPerson4()">추가</button></div>
+      </div>
+    </div>
+    <div class="entry-add-card" style="margin-top:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s4')">
         <span class="card-title" style="margin:0;">열쇠 프리셋</span>
         <span class="material-icons-round" id="s4-icon" style="color:var(--accent-amber);font-size:20px;">expand_more</span>
@@ -306,6 +311,12 @@
       </div>
     </div>
     <div style="margin-top:16px;margin-bottom:4px;font-size:11px;font-weight:700;color:var(--accent-teal);letter-spacing:1px;padding:0 2px;">-- 데이터 관리 --</div>
+    <div class="entry-add-card" style="margin-top:0;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="syncToMaru()">
+        <span class="card-title" style="margin:0;">동기화 (클립보드 복사)</span>
+        <span class="material-icons-round" style="color:var(--accent-teal);font-size:20px;">sync</span>
+      </div>
+    </div>
     <div class="entry-add-card" style="margin-top:0;">
       <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleSetting('s-data')">
         <span class="card-title" style="margin:0;">기록 내보내기 / 가져오기</span>

@@ -2127,6 +2127,16 @@ body.theme-light .entry-add-card {
   background: var(--accent);
   color: #fff;
 }
+body.theme-light .cal-sub-tab {
+  color: #5d6b82;
+  background: #e8edf5;
+  border: 1px solid #c5d0e0;
+}
+body.theme-light .cal-sub-tab.active {
+  color: #fff;
+  background: #2e61a9;
+  border-color: #2e61a9;
+}
 
 .ot-summary-strip {
   display: flex;
@@ -3054,4 +3064,20 @@ body.theme-light textarea {
 body.theme-light .entry-add-card[style*="background:#fafbfc"] {
   background: var(--bg-surface) !important;
   border-color: var(--border-subtle) !important;
+}
+
+/* ── 테마 토글 ── */
+.theme-toggle-btn {
+  display:flex;align-items:center;gap:6px;
+  padding:8px 16px;border-radius:20px;border:2px solid var(--border-subtle);
+  background:var(--bg-input);color:var(--text-secondary);
+  font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;
+}
+.theme-toggle-btn.active {
+  background:var(--accent-green);border-color:var(--accent-green);color:#fff;
+}
+/* ── 캘린더 월별 현황 박스 ── */
+.cal-month-summary-box {
+  background:var(--bg-surface);border:1px solid var(--border-subtle);
+  border-radius:12px;padding:12px 14px;margin:8px 0;
 }

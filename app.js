@@ -1,6 +1,6 @@
 function todayLocal(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 let viewDate=todayLocal();
-let events=[],personnel=[],personnel2=[],personnel3=[],keyPresets=['탄약고','정문','후문','무기고'];
+let events=[],personnel=[],personnel2=[],personnel3=[],personnel4=[],keyPresets=['탄약고','정문','후문','무기고'];
 let keyCatalog=[];
 let otSessions=[];
 let entryTypes=['탄약고','무기고','BL탄약고','교탄탄약고','간이탄약고'];
@@ -32,12 +32,17 @@ let datesWithData=new Set(JSON.parse(localStorage.getItem('event_dates')||'[]'))
 let schedules=JSON.parse(localStorage.getItem('schedules')||'[]');
 let offDays=new Set(JSON.parse(localStorage.getItem('offDays')||'[]'));
 
-// ── 테마 자동 전환 ──
+// ── 테마 수동 전환 ──
 function applyTheme(){
-  const h=new Date().getHours();
-  const isDark=(h>=7&&h<18);
+  const saved=localStorage.getItem('appTheme');
+  const isDark=saved?saved==='dark':true; // 기본값: 다크
   document.body.classList.toggle('theme-dark',isDark);
   document.body.classList.toggle('theme-light',!isDark);
+}
+function setTheme(mode){
+  localStorage.setItem('appTheme',mode);
+  applyTheme();
+  renderSettings();
 }
 
 // ── 뒤로가기 방지 (앱 모드에서 크롬으로 이탈 차단) ──
@@ -52,9 +57,7 @@ function applyTheme(){
 function init(){
   // 스플래시 스크린 제거
   setTimeout(()=>{const s=document.getElementById('splash');if(s)s.remove();},2200);
-  // 테마 자동 전환
   applyTheme();
-  setInterval(applyTheme,60000);
   document.getElementById('setup').style.display='none';
   document.getElementById('app').style.display='block';
   // 헤더 실제 높이 기반으로 context bar top 동적 설정
@@ -126,7 +129,6 @@ function updateDateLabel(){
   if(viewDate===today) text='오늘 '+text;
   label.textContent=text;
   label.className='current-date'+(datesWithData.has(viewDate)?' has-data':'');
-  document.getElementById('todayDate').textContent=text;
 }
 function prevDay(){viewDate=dateShift(viewDate,-1);updateDateLabel();loadEvents();}
 function nextDay(){viewDate=dateShift(viewDate,+1);updateDateLabel();loadEvents();}
@@ -153,7 +155,7 @@ function loadPersonnel(){
   const data=localStorage.getItem('personnel');
   if(data){
     const d=JSON.parse(data);
-    personnel=d.personnel||[];personnel2=d.personnel2||[];personnel3=d.personnel3||[];
+    personnel=d.personnel||[];personnel2=d.personnel2||[];personnel3=d.personnel3||[];personnel4=d.personnel4||[];
     if(d.key_presets)keyPresets=d.key_presets;
     if(d.entry_types)entryTypes=d.entry_types;
     keyCatalog=d.key_catalog||[];
@@ -173,7 +175,7 @@ function saveEvents(){
 function savePersonnel(){
   try{
     ensureKeyCatalog();
-    localStorage.setItem('personnel',JSON.stringify({personnel,personnel2,personnel3,key_presets:keyPresets,entry_types:entryTypes,key_catalog:keyCatalog}));
+    localStorage.setItem('personnel',JSON.stringify({personnel,personnel2,personnel3,personnel4,key_presets:keyPresets,entry_types:entryTypes,key_catalog:keyCatalog}));
     return Promise.resolve(true);
   }catch(e){toast('저장 실패: 저장 공간 부족');return Promise.resolve(false);}
 }
@@ -794,7 +796,8 @@ function getRoleRank(name){
 }
 function renderKeyPersonSelector(){
   const el=document.getElementById('keyPersonSelector');if(!el)return;
-  const allNames=[...new Set([...personnel,...personnel2,...personnel3].map(p=>p.name))];
+  const src=personnel4.length?personnel4:[...personnel,...personnel2,...personnel3];
+  const allNames=[...new Set(src.map(p=>p.name))];
   el.innerHTML='<div class="person-selector" style="flex-wrap:wrap;gap:6px;margin-top:6px;">'
     +allNames.map(n=>'<div class="person-chip'+(selectedKeyPersons.has(n)?' selected':'')+'" onclick="toggleKeyPerson(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')
     +'</div>'
@@ -802,7 +805,8 @@ function renderKeyPersonSelector(){
 }
 function renderKeyPersonSelector2(){
   const el=document.getElementById('keyPersonSelector2');if(!el)return;
-  const allNames=[...new Set([...personnel,...personnel2,...personnel3].map(p=>p.name))];
+  const src=personnel4.length?personnel4:[...personnel,...personnel2,...personnel3];
+  const allNames=[...new Set(src.map(p=>p.name))];
   el.innerHTML='<div class="person-selector" style="flex-wrap:wrap;gap:6px;margin-top:6px;">'
     +allNames.map(n=>'<div class="person-chip'+(selectedKeyReceiver2===n?' selected':'')+'" onclick="selectKeyReceiver2(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')
     +'</div>';
@@ -1580,6 +1584,14 @@ function renderSettings(){
   renderSettingList('entryTypeList',entryTypes,t=>t,'removeEntryType','et');
   renderSettingList('personnel2List',personnel2,p=>p.name,'removePerson2','p2');
   renderSettingList('personnel3List',personnel3,p=>p.name,'removePerson3','p3');
+  renderSettingList('personnel4List',personnel4,p=>p.name,'removePerson4','p4');
+  // 테마 토글 버튼
+  const themeEl=document.getElementById('themeToggleRow');
+  if(themeEl){
+    const cur=localStorage.getItem('appTheme')||'dark';
+    themeEl.innerHTML='<button class="theme-toggle-btn'+(cur==='dark'?' active':'')+'" onclick="setTheme(\'dark\')"><span class="material-icons-round">dark_mode</span> 다크</button>'
+      +'<button class="theme-toggle-btn'+(cur==='light'?' active':'')+'" onclick="setTheme(\'light\')"><span class="material-icons-round">light_mode</span> 라이트</button>';
+  }
 }
 function setupSettingDrag(container, arr, tag){
   let dragIdx=null, overIdx=null;
@@ -1587,7 +1599,7 @@ function setupSettingDrag(container, arr, tag){
     if(dragIdx===null||overIdx===null||dragIdx===overIdx)return;
     const moved=arr.splice(dragIdx,1)[0];arr.splice(overIdx,0,moved);
     savePersonnel();renderSettings();
-    if(tag==='p1'||tag==='p2'||tag==='p3')_refreshPersonViews();
+    if(tag==='p1'||tag==='p2'||tag==='p3'||tag==='p4')_refreshPersonViews();
     if(tag==='et')renderEntryForm();
     if(tag==='kp'){renderKeyPresets();renderPersonButtons();}
     dragIdx=overIdx=null;
@@ -1717,7 +1729,7 @@ function switchCalTab(tab){
   document.getElementById('otPanel').style.display=tab==='ot'?'':'none';
   document.getElementById('subTabCal').classList.toggle('active',tab==='cal');
   document.getElementById('subTabOt').classList.toggle('active',tab==='ot');
-  if(tab==='ot'){renderOTBoard();renderOTSummary();}
+  if(tab==='ot'){renderOTBoard();renderOTSummary();renderOTMonthlySummary();}
 }
 function renderOTBoard(){
   const board=document.getElementById('otBoard');if(!board)return;
@@ -1828,6 +1840,17 @@ async function addPerson2(){const n=document.getElementById('newPerson2Name').va
 async function removePerson2(i){if(!confirm(personnel2[i].name+' 삭제?'))return;const bk=[...personnel2];personnel2.splice(i,1);if(await savePersonnel()){_refreshPersonViews();}else{personnel2=bk;toast('저장 실패.');renderSettings();}}
 async function addPerson3(){const n=document.getElementById('newPerson3Name').value.trim();if(!n)return;personnel3.push({name:n});document.getElementById('newPerson3Name').value='';if(await savePersonnel()){toast(n+' 추가(3)');_refreshPersonViews();}else{personnel3.pop();document.getElementById('newPerson3Name').value=n;toast('저장 실패.');}}
 async function removePerson3(i){if(!confirm(personnel3[i].name+' 삭제?'))return;const bk=[...personnel3];personnel3.splice(i,1);if(await savePersonnel()){_refreshPersonViews();}else{personnel3=bk;toast('저장 실패.');renderSettings();}}
+function addPerson4(){
+  const inp=document.getElementById('newPerson4Name');
+  if(!inp||!inp.value.trim())return;
+  personnel4.push({id:Date.now(),name:inp.value.trim()});
+  inp.value='';
+  savePersonnel();renderSettings();_refreshPersonViews();
+}
+function removePerson4(i){
+  personnel4.splice(i,1);
+  savePersonnel();renderSettings();_refreshPersonViews();
+}
 async function addKeyPreset(){const n=document.getElementById('newKeyPreset').value.trim();if(!n)return;keyPresets.push(n);ensureKeyCatalog();document.getElementById('newKeyPreset').value='';if(await savePersonnel()){renderKeyPresets();renderSettings();renderKeyDetailSelector();}else{keyPresets.pop();document.getElementById('newKeyPreset').value=n;toast('저장 실패.');}}
 async function removeKeyPreset(i){if(!confirm(keyPresets[i]+' 삭제?'))return;const bk=[...keyPresets];keyPresets.splice(i,1);ensureKeyCatalog();if(await savePersonnel()){renderKeyPresets();renderSettings();renderKeyDetailSelector();}else{keyPresets=bk;toast('저장 실패.');renderSettings();}}
 async function addEntryType(){const n=document.getElementById('newEntryType').value.trim();if(!n)return;entryTypes.push(n);document.getElementById('newEntryType').value='';if(await savePersonnel()){renderSettings();renderEntryForm();}else{entryTypes.pop();document.getElementById('newEntryType').value=n;toast('저장 실패.');}}
@@ -1899,9 +1922,86 @@ function fallbackCopy(text){
 }
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2000);}
 
+// ── 캘린더 셀 탭/롱프레스 ──
+let _calPressTimer=null,_calPressStart=0,_calPressDate=null;
+function calCellDown(dateStr,e){
+  _calPressDate=dateStr;
+  _calPressStart=Date.now();
+  _calPressTimer=setTimeout(()=>{
+    _calPressTimer=null;
+    calDateClick(dateStr);
+  },2000);
+}
+function calCellUp(dateStr,e){
+  if(_calPressTimer){
+    clearTimeout(_calPressTimer);_calPressTimer=null;
+    // 짧은 탭: 월별 현황 표시
+    calCellTap(dateStr);
+  }
+  // else: 롱프레스 이미 처리됨
+}
+function calCellCancel(){
+  if(_calPressTimer){clearTimeout(_calPressTimer);_calPressTimer=null;}
+}
+function calCellTap(dateStr){
+  const [y,m]=dateStr.split('-');
+  const monthStr=y+'-'+m;
+  const monthScheds=schedules.filter(s=>s.date.startsWith(monthStr));
+  const 근무=monthScheds.filter(s=>s.type==='근무');
+  const 휴가=monthScheds.filter(s=>s.type==='휴가');
+  const 전투=monthScheds.filter(s=>s.type==='전투휴무');
+  const summaryEl=document.getElementById('calMonthSummary');
+  if(!summaryEl)return;
+  const fmt=s=>'<li style="font-size:12px;margin:2px 0;"><span style="color:#aaa;">'+s.date.slice(5)+'</span> '+escapeHtml(s.title||s.type)+(s.persons?(' <span style="color:#aaa;font-size:11px;">'+escapeHtml(s.persons)+'</span>'):'')+'</li>';
+  let html='<div class="cal-month-summary-box">';
+  html+='<div style="font-size:11px;font-weight:700;color:var(--text-secondary);letter-spacing:0.8px;margin-bottom:6px;">'+y+'년 '+m+'월 현황</div>';
+  if(근무.length){html+='<div style="font-size:12px;font-weight:600;color:#1565c0;margin-bottom:2px;">📋 당직근무 ('+근무.length+'건)</div><ul style="margin:0 0 8px 14px;">'+근무.map(fmt).join('')+'</ul>';}
+  if(휴가.length){html+='<div style="font-size:12px;font-weight:600;color:#c62828;margin-bottom:2px;">🏖️ 휴가 ('+휴가.length+'건)</div><ul style="margin:0 0 8px 14px;">'+휴가.map(fmt).join('')+'</ul>';}
+  if(전투.length){html+='<div style="font-size:12px;font-weight:600;color:#e65100;margin-bottom:2px;">⚔️ 전투휴무 ('+전투.length+'건)</div><ul style="margin:0 0 8px 14px;">'+전투.map(fmt).join('')+'</ul>';}
+  if(!근무.length&&!휴가.length&&!전투.length){html+='<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px 0;">이번 달 일정 없음</div>';}
+  html+='</div>';
+  summaryEl.innerHTML=html;
+  summaryEl.style.display='';
+}
+
 // ── 월간 캘린더 ──
 let calViewYear=new Date().getFullYear();
 let calViewMonth=new Date().getMonth();
+
+function renderOTMonthlySummary(){
+  const el=document.getElementById('otMonthlySummary');if(!el)return;
+  const year=calViewYear,month=calViewMonth;
+  const monthStr=year+'-'+String(month+1).padStart(2,'0');
+  const lastDate=new Date(year,month+1,0).getDate();
+  const allMonthOt=[];
+  for(let d=1;d<=lastDate;d++){
+    const ds=monthStr+'-'+String(d).padStart(2,'0');
+    try{const ot=JSON.parse(localStorage.getItem('overtime_'+ds)||'[]');if(Array.isArray(ot))ot.forEach(s=>allMonthOt.push({...s,date:ds}));}catch(e){}
+  }
+  const monthNames=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  let html='<div class="card-title" style="margin-top:12px;"><span class="material-icons-round" style="font-size:16px;vertical-align:middle;">more_time</span> '+year+'년 '+monthNames[month]+' 초과근무 요약</div>';
+  if(allMonthOt.length){
+    const byPerson={};
+    allMonthOt.forEach(s=>{
+      const diff=s.start_time&&s.end_time?Math.max(0,parseClockToMinutes(s.end_time)-parseClockToMinutes(s.start_time)):0;
+      const names=(s.subject||'').split(',').map(n=>n.trim()).filter(Boolean);
+      names.forEach(n=>{byPerson[n]=(byPerson[n]||0)+diff;});
+    });
+    html+='<div class="cal-ot-list">';
+    allMonthOt.sort((a,b)=>a.date.localeCompare(b.date)).forEach(s=>{
+      const diff=s.start_time&&s.end_time?Math.max(0,parseClockToMinutes(s.end_time)-parseClockToMinutes(s.start_time)):0;
+      html+='<div class="cal-ot-row"><span class="cal-ot-date">'+s.date.slice(5)+'</span><span class="cal-ot-desc">'+escapeHtml(s.subject||'')+'</span><span class="cal-ot-time">'+formatHourMinute(diff)+'</span></div>';
+    });
+    html+='<div class="cal-ot-totals">';
+    Object.entries(byPerson).forEach(([name,mins])=>{
+      html+='<div class="cal-ot-total-row"><span>'+escapeHtml(name)+'</span><span class="cal-ot-total-val">합계 '+formatHourMinute(mins)+'</span></div>';
+    });
+    html+='</div></div>';
+  }else{
+    html+='<div class="empty-state" style="padding:16px;"><span class="material-icons-round">event_available</span><p>이번 달 초과근무 기록 없음</p></div>';
+  }
+  el.innerHTML=html;
+}
 
 function renderCalendar(){
   const area=document.getElementById('calendarArea');
@@ -1921,8 +2021,8 @@ function renderCalendar(){
     // 금요일 날짜 객체를 받아 해당 주차의 CCTV 담당자 반환
     if(fridayDate.getDay()!==5) return null;
     const week=getWeekOfMonth(fridayDate);
-    if(week===1||week===3||week===5) return '대대장';
-    if(week===2||week===4) return '군수과장';
+    if(week===1||week===3||week===5) return {who:'대대장',week};
+    if(week===2||week===4) return {who:'군수과장',week};
     return null;
   }
   function _dateStr(d){
@@ -1932,17 +2032,17 @@ function renderCalendar(){
     const d=new Date(year,month,day);
     // 1) 이 날이 금요일이면
     if(d.getDay()===5){
-      const who=_cctvForFriday(d);
-      if(!who) return null;
+      const res=_cctvForFriday(d);
+      if(!res) return null;
       // 휴무일이면 이 날엔 표시하지 않음 (전날로 이월)
       if(offDays.has(_dateStr(d))) return null;
-      return {who,label:'CCTV점검',displaced:false};
+      return {who:res.who,week:res.week,label:'CCTV점검',displaced:false};
     }
     // 2) 다음 날이 금요일 + 휴무일이면 → 오늘로 이월
     const next=new Date(year,month,day+1);
     if(next.getDay()===5 && offDays.has(_dateStr(next))){
-      const who=_cctvForFriday(next);
-      if(who) return {who,label:'CCTV점검',displaced:true};
+      const res=_cctvForFriday(next);
+      if(res) return {who:res.who,week:res.week,label:'CCTV점검',displaced:true};
     }
     return null;
   }
@@ -2006,12 +2106,13 @@ function renderCalendar(){
     if(isOff) cellCls+=' off-day';
     if(hasVacation) cellCls+=' vacation';
 
-    html+='<div class="'+cellCls+'" onclick="calDateClick(\''+dateStr+'\')">';
+    html+='<div class="'+cellCls+'" onpointerdown="calCellDown(\''+dateStr+'\',event)" onpointerup="calCellUp(\''+dateStr+'\',event)" onpointercancel="calCellCancel()" oncontextmenu="return false;">';
     html+='<span class="cal-date-num">'+d+(isOff?'<span class="cal-off-mark">휴</span>':'')+(hasHoliday?'<span class="cal-off-mark" style="color:#e53935;">휴</span>':'')+'</span>';
 
     if(cctv){
       const cctvCls='cal-event cctv'+(cctv.displaced?' displaced':'');
-      const cctvLabel=cctv.displaced?'↑'+cctv.who:cctv.who;
+      const wk=cctv.week?cctv.week+'주':'';
+      const cctvLabel=cctv.displaced?('↑'+wk+'['+cctv.who+']'):(wk+'['+cctv.who+']');
       html+='<div class="'+cctvCls+'" title="'+(cctv.displaced?'휴무 이월':'')+'">'+cctvLabel+'</div>';
     }
     if(otCount>0){
@@ -2029,38 +2130,6 @@ function renderCalendar(){
     }
 
     html+='</div>';
-  }
-  html+='</div>';
-
-  // 이번 달 초과근무 요약
-  html+='<div class="cal-ot-summary">';
-  html+='<div class="card-title"><span class="material-icons-round" style="font-size:16px;vertical-align:middle;">more_time</span> 이번 달 초과근무 요약</div>';
-  if(allMonthOt.length){
-    // 날짜·사람별 누적 시간 계산
-    const byPerson={};
-    allMonthOt.forEach(s=>{
-      const diff=s.start_time&&s.end_time?Math.max(0,parseClockToMinutes(s.end_time)-parseClockToMinutes(s.start_time)):0;
-      const names=(s.subject||'').split(',').map(n=>n.trim()).filter(Boolean);
-      names.forEach(n=>{byPerson[n]=(byPerson[n]||0)+diff;});
-    });
-    html+='<div class="cal-ot-list">';
-    allMonthOt.sort((a,b)=>a.date.localeCompare(b.date)).forEach(s=>{
-      const diff=s.start_time&&s.end_time?Math.max(0,parseClockToMinutes(s.end_time)-parseClockToMinutes(s.start_time)):0;
-      html+='<div class="cal-ot-row">'
-        +'<span class="cal-ot-date">'+s.date.slice(5)+'</span>'
-        +'<span class="cal-ot-desc">'+escapeHtml(s.subject||'')+'</span>'
-        +'<span class="cal-ot-time">'+formatHourMinute(diff)+'</span>'
-        +'</div>';
-    });
-    // 인원별 합계
-    html+='<div class="cal-ot-totals">';
-    Object.entries(byPerson).forEach(([name,mins])=>{
-      html+='<div class="cal-ot-total-row"><span>'+escapeHtml(name)+'</span><span class="cal-ot-total-val">합계 '+formatHourMinute(mins)+'</span></div>';
-    });
-    html+='</div>';
-    html+='</div>';
-  } else {
-    html+='<div class="empty-state" style="padding:16px;"><span class="material-icons-round">event_available</span><p>이번 달 초과근무 기록 없음</p></div>';
   }
   html+='</div>';
 
@@ -2088,9 +2157,6 @@ function calDateClick(dateStr){
   const dow=['일','월','화','수','목','금','토'][new Date(dateStr).getDay()];
   const isPast=dateStr<=todayLocal();
 
-  const offBtn='<button class="cal-off-btn'+(isOff?' active':'')+'" onclick="toggleOffDay(\''+dateStr+'\')">'
-    +(isOff?'<span class="material-icons-round">event_busy</span> 휴무일 해제':'<span class="material-icons-round">event_busy</span> 휴무일 설정')+'</button>';
-
   const schedList=dayScheds.length
     ? dayScheds.map(s=>'<div class="cal-sched-item" style="border-left:3px solid '+(s.color||'#34a853')+'">'
         +'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
@@ -2107,7 +2173,6 @@ function calDateClick(dateStr){
   content.innerHTML=
     '<div class="insp-modal-title">'+y+'년 '+m+'월 '+d+'일 ('+dow+')</div>'
     +(isOff?'<div class="cal-off-badge"><span class="material-icons-round">event_busy</span> 휴무일</div>':'')
-    +offBtn
     +'<div style="margin-top:14px;margin-bottom:6px;font-size:11px;font-weight:700;color:var(--text-secondary);letter-spacing:0.8px;">일정</div>'
     +schedList
     +'<button class="cal-add-sched-btn" onclick="openAddScheduleForm(\''+dateStr+'\')"><span class="material-icons-round">add</span> 일정 추가</button>'
@@ -2209,17 +2274,26 @@ function saveSchedule(dateStr){
 
 // ── 데이터 내보내기/가져오기 ──
 function exportData(){
+  // 날짜별 이벤트·초과근무 전체 수집
+  const dates=[...datesWithData];
+  const eventsByDate={};
+  const otByDate={};
+  dates.forEach(d=>{
+    const ev=localStorage.getItem('events_'+d);
+    if(ev) try{eventsByDate[d]=JSON.parse(ev);}catch(e){}
+    const ot=localStorage.getItem('overtime_'+d);
+    if(ot) try{const parsed=JSON.parse(ot);if(Array.isArray(parsed)&&parsed.length)otByDate[d]=parsed;}catch(e){}
+  });
   const data={
-    events: JSON.parse(localStorage.getItem('events')||'[]'),
-    personnel: JSON.parse(localStorage.getItem('personnel')||'[]'),
-    personnel2: JSON.parse(localStorage.getItem('personnel2')||'[]'),
-    personnel3: JSON.parse(localStorage.getItem('personnel3')||'[]'),
-    keyPresets: JSON.parse(localStorage.getItem('keyPresets')||'[]'),
-    keyCatalog: JSON.parse(localStorage.getItem('keyCatalog')||'[]'),
-    entryTypes: JSON.parse(localStorage.getItem('entryTypes')||'[]'),
+    version:2,
+    personnel: JSON.parse(localStorage.getItem('personnel')||'{}'),
     boardTimers: JSON.parse(localStorage.getItem('boardTimers')||'{}'),
-    otSessions: JSON.parse(localStorage.getItem('otSessions')||'[]'),
-    event_dates: JSON.parse(localStorage.getItem('event_dates')||'[]'),
+    event_dates: dates,
+    events_by_date: eventsByDate,
+    ot_by_date: otByDate,
+    schedules: schedules,
+    offDays: [...offDays],
+    appTheme: localStorage.getItem('appTheme')||'dark',
     exportDate: new Date().toISOString()
   };
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
@@ -2239,16 +2313,33 @@ function importData(event){
   reader.onload=function(e){
     try{
       const data=JSON.parse(e.target.result);
-      if(data.events) localStorage.setItem('events',JSON.stringify(data.events));
-      if(data.personnel) localStorage.setItem('personnel',JSON.stringify(data.personnel));
-      if(data.personnel2) localStorage.setItem('personnel2',JSON.stringify(data.personnel2));
-      if(data.personnel3) localStorage.setItem('personnel3',JSON.stringify(data.personnel3));
-      if(data.keyPresets) localStorage.setItem('keyPresets',JSON.stringify(data.keyPresets));
-      if(data.keyCatalog) localStorage.setItem('keyCatalog',JSON.stringify(data.keyCatalog));
-      if(data.entryTypes) localStorage.setItem('entryTypes',JSON.stringify(data.entryTypes));
-      if(data.boardTimers) localStorage.setItem('boardTimers',JSON.stringify(data.boardTimers));
-      if(data.otSessions) localStorage.setItem('otSessions',JSON.stringify(data.otSessions));
-      if(data.event_dates) localStorage.setItem('event_dates',JSON.stringify(data.event_dates));
+      if(data.version===2){
+        // ── V2 포맷 (날짜별 분산 저장) ──
+        if(data.personnel) localStorage.setItem('personnel',JSON.stringify(data.personnel));
+        if(data.boardTimers) localStorage.setItem('boardTimers',JSON.stringify(data.boardTimers));
+        if(data.event_dates) localStorage.setItem('event_dates',JSON.stringify(data.event_dates));
+        if(data.events_by_date){
+          Object.entries(data.events_by_date).forEach(([d,ev])=>{
+            localStorage.setItem('events_'+d,JSON.stringify(ev));
+          });
+        }
+        if(data.ot_by_date){
+          Object.entries(data.ot_by_date).forEach(([d,ot])=>{
+            localStorage.setItem('overtime_'+d,JSON.stringify(ot));
+          });
+        }
+        if(data.schedules) localStorage.setItem('schedules',JSON.stringify(data.schedules));
+        if(data.offDays) localStorage.setItem('offDays',JSON.stringify(data.offDays));
+        if(data.appTheme) localStorage.setItem('appTheme',data.appTheme);
+      } else {
+        // ── 레거시 포맷 호환 ──
+        if(data.personnel&&typeof data.personnel==='object'&&!Array.isArray(data.personnel))
+          localStorage.setItem('personnel',JSON.stringify(data.personnel));
+        if(data.event_dates) localStorage.setItem('event_dates',JSON.stringify(data.event_dates));
+        if(data.boardTimers) localStorage.setItem('boardTimers',JSON.stringify(data.boardTimers));
+        if(data.schedules) localStorage.setItem('schedules',JSON.stringify(data.schedules));
+        if(data.offDays) localStorage.setItem('offDays',JSON.stringify(data.offDays));
+      }
       toast('데이터 가져오기 완료 — 새로고침합니다');
       setTimeout(()=>location.reload(),1000);
     }catch(err){
