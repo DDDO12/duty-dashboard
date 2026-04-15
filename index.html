@@ -32,17 +32,17 @@
 <div id="app" style="display:none;">
   <div class="header">
     <h1>실시사항</h1>
+    <div class="header-date-nav">
+      <button onclick="prevDay()"><span class="material-icons-round">chevron_left</span></button>
+      <span class="current-date" id="dateLabel" onclick="openCalendar()"></span>
+      <button onclick="nextDay()"><span class="material-icons-round">chevron_right</span></button>
+      <button onclick="openTlManualModal()"><span class="material-icons-round">edit</span></button>
+    </div>
     <button class="header-icon-btn" onclick="openSettingsPage()"><span class="material-icons-round">settings</span></button>
   </div>
 
   <!-- 공통 context bar: 모든 탭에서 항상 노출 -->
   <div id="contextBar">
-    <div class="date-nav">
-      <button onclick="prevDay()"><span class="material-icons-round">chevron_left</span></button>
-      <span class="current-date" id="dateLabel" onclick="openCalendar()"></span>
-      <button onclick="nextDay()"><span class="material-icons-round">chevron_right</span></button>
-      <button class="tl-manual-fab" onclick="openTlManualModal()"><span class="material-icons-round">edit</span></button>
-    </div>
     <div class="active-block" id="activeBlock" style="display:none;">
       <div class="active-block-header" onclick="toggleActiveBlock()" style="cursor:pointer;">
         <span class="live-dot"></span>

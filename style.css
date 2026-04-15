@@ -209,10 +209,10 @@ body {
 /* ── Header ── */
 .header {
   background: var(--bg-header);
-  padding: 16px 20px;
+  padding: 10px 12px 10px 16px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
   box-shadow: var(--shadow-lg);
   position: sticky;
   top: 0;
@@ -220,6 +220,69 @@ body {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.header h1 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+/* ── 헤더 내 날짜 네비게이션 ── */
+.header-date-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.header-date-nav button {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #fff;
+  padding: 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.header-date-nav button:active {
+  background: rgba(255,255,255,0.25);
+  transform: scale(0.92);
+}
+.header-date-nav .current-date {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  padding: 6px 8px;
+  border-radius: 16px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.15);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 0.15s;
+  letter-spacing: -0.3px;
+}
+.header-date-nav .current-date:active {
+  background: rgba(0,0,0,0.4);
+}
+.header-date-nav .current-date.has-data::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--accent-green);
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
 }
 
 .header-left h1 {
@@ -1410,8 +1473,8 @@ body.theme-light .entry-add-card {
   flex-direction: column;
   overflow: hidden;
   padding: 0;
-  /* header(56) + date-nav(56) + bottom-nav(72) */
-  height: calc(100dvh - 184px);
+  /* header(52) + bottom-nav(72) */
+  height: calc(100dvh - 124px);
 }
 .insp-fullscreen {
   flex: 1;
