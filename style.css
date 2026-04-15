@@ -2284,6 +2284,196 @@ body.theme-light .entry-add-card {
   border-radius: 50%;
   background: var(--accent-green);
 }
+/* ── 캘린더 일정 & 휴무일 ── */
+.cal-cell.off-day {
+  background: rgba(120,120,120,0.08);
+}
+.cal-off-mark {
+  font-size: 8px;
+  font-weight: 800;
+  color: #888;
+  margin-left: 2px;
+  vertical-align: super;
+}
+.cal-event.sched {
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-event.sched-more {
+  font-size: 8px;
+  color: var(--text-secondary);
+  padding: 0 2px;
+}
+/* ── 날짜 모달 일정 UI ── */
+.cal-off-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(120,120,120,0.15);
+  color: #888;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.cal-off-btn {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.cal-off-btn.active {
+  border-color: #888;
+  color: #888;
+  background: rgba(120,120,120,0.12);
+}
+.cal-sched-item {
+  background: var(--bg-input);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.cal-sched-time {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-green);
+  margin-right: 4px;
+}
+.cal-sched-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.cal-sched-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+.cal-sched-del {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+.cal-sched-del .material-icons-round { font-size: 16px; }
+.cal-add-sched-btn {
+  width: 100%;
+  background: rgba(52,168,83,0.1);
+  border: 1.5px dashed var(--accent-green);
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-green);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+.cal-goto-tl-btn {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 8px;
+}
+.sched-color-chip {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: border-color 0.15s;
+}
+.sched-color-chip.selected {
+  border-color: var(--text-primary);
+}
+/* ── 타임라인 예정 일정 ── */
+.tl-off-day-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(120,120,120,0.12);
+  color: #888;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.tl-sched-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-green);
+  letter-spacing: 0.8px;
+  padding: 2px 0 6px;
+  text-transform: uppercase;
+}
+.tl-sched-item {
+  background: var(--bg-surface);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.tl-sched-time {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.tl-sched-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.tl-sched-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+.tl-sched-note {
+  width: 100%;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding-top: 4px;
+}
 .cal-ot-summary {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);

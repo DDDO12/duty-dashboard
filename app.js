@@ -26,6 +26,9 @@ let timerIdCounter=0;
 let liveRefreshHandle=null;
 // 날짜별 데이터 존재 캐시 (localStorage 기반)
 let datesWithData=new Set(JSON.parse(localStorage.getItem('event_dates')||'[]'));
+// 미래 일정 & 휴무일
+let schedules=JSON.parse(localStorage.getItem('schedules')||'[]');
+let offDays=new Set(JSON.parse(localStorage.getItem('offDays')||'[]'));
 
 // ── 테마 자동 전환 ──
 function applyTheme(){
@@ -324,7 +327,22 @@ function renderTimeline(){
   const colors={entry:'#1a73e8',patrol:'#34a853',cctv:'#9334e6'};
   const tlLabels={entry:'출입',patrol:'순찰',cctv:'CCTV'};
 
+  // ── 예정 일정 (schedules) ──
   let html='';
+  const dayScheds=schedules.filter(s=>s.date===viewDate).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const isOffDay=offDays.has(viewDate);
+  if(isOffDay){
+    html+='<div class="tl-off-day-banner"><span class="material-icons-round">event_busy</span> 휴무일</div>';
+  }
+  if(dayScheds.length&&(tlFilter==='all'||tlFilter==='inspection')){
+    html+='<div class="tl-sched-header">예정 일정</div>';
+    html+=dayScheds.map(s=>'<div class="tl-sched-item" style="border-left:3px solid '+(s.color||'#34a853')+'">'
+      +'<span class="tl-sched-time">'+(s.time||'--:--')+'</span>'
+      +'<span class="tl-sched-badge" style="background:'+(s.color||'#34a853')+'">예정</span>'
+      +'<span class="tl-sched-title">'+escapeHtml(s.title)+'</span>'
+      +(s.note?'<div class="tl-sched-note">'+escapeHtml(s.note)+'</div>':'')
+    +'</div>').join('');
+  }
   if(activeIds.length){
     html+='<div style="font-size:11px;font-weight:700;color:#e65100;padding:4px 0 6px;letter-spacing:0.5px;">진행 중 '+activeIds.length+'</div>';
     html+=activeIds.map(([id,t])=>{
@@ -1863,15 +1881,18 @@ function renderCalendar(){
     const dateObj=new Date(year,month,d);
     const dow=dateObj.getDay();
 
+    const dateStr=year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isOff=offDays.has(dateStr);
+    const dayScheds=schedules.filter(s=>s.date===dateStr);
+
     let cellCls='cal-cell';
     if(isToday) cellCls+=' today';
     if(dow===0) cellCls+=' sun';
     if(dow===6) cellCls+=' sat';
-
-    const dateStr=year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    if(isOff) cellCls+=' off-day';
 
     html+='<div class="'+cellCls+'" onclick="calDateClick(\''+dateStr+'\')">';
-    html+='<span class="cal-date-num">'+d+'</span>';
+    html+='<span class="cal-date-num">'+d+(isOff?'<span class="cal-off-mark">휴</span>':'')+'</span>';
 
     if(cctv){
       html+='<div class="cal-event cctv">'+cctv.who+'</div>';
@@ -1881,6 +1902,12 @@ function renderCalendar(){
     }
     if(hasEvt&&!otCount){
       html+='<div class="cal-dot"></div>';
+    }
+    if(dayScheds.length){
+      dayScheds.slice(0,2).forEach(s=>{
+        html+='<div class="cal-event sched" style="background:'+(s.color||'#34a853')+';opacity:0.92;">'+(s.time?s.time.slice(0,5)+' ':'')+escapeHtml(s.title)+'</div>';
+      });
+      if(dayScheds.length>2) html+='<div class="cal-event sched-more">+'+( dayScheds.length-2)+'</div>';
     }
 
     html+='</div>';
@@ -1913,13 +1940,96 @@ function changeCalMonth(delta){
   renderCalendar();
 }
 
+// ── 일정·휴무일 저장 ──
+function saveSchedules(){localStorage.setItem('schedules',JSON.stringify(schedules));}
+function saveOffDays(){localStorage.setItem('offDays',JSON.stringify([...offDays]));}
+
+// ── 캘린더 날짜 클릭 → 일정 모달 ──
 function calDateClick(dateStr){
-  viewDate=dateStr;
-  updateDateLabel();
-  loadEvents();
-  document.querySelectorAll('.nav-item').forEach(n=>{
-    if(n.dataset.page==='timeline') n.click();
-  });
+  const modal=document.getElementById('inspModal');
+  const content=document.getElementById('inspModalContent');
+  const isOff=offDays.has(dateStr);
+  const dayScheds=schedules.filter(s=>s.date===dateStr).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const [y,m,d]=dateStr.split('-');
+  const dow=['일','월','화','수','목','금','토'][new Date(dateStr).getDay()];
+  const isPast=dateStr<=todayLocal();
+
+  const offBtn='<button class="cal-off-btn'+(isOff?' active':'')+'" onclick="toggleOffDay(\''+dateStr+'\')">'
+    +(isOff?'<span class="material-icons-round">event_busy</span> 휴무일 해제':'<span class="material-icons-round">event_busy</span> 휴무일 설정')+'</button>';
+
+  const schedList=dayScheds.length
+    ? dayScheds.map(s=>'<div class="cal-sched-item" style="border-left:3px solid '+(s.color||'#34a853')+'">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+          +'<div>'
+            +(s.time?'<span class="cal-sched-time">'+s.time+'</span> ':'')
+            +'<span class="cal-sched-title">'+escapeHtml(s.title)+'</span>'
+          +'</div>'
+          +'<button class="cal-sched-del" onclick="deleteSchedule('+s.id+',\''+dateStr+'\')"><span class="material-icons-round">close</span></button>'
+        +'</div>'
+        +(s.note?'<div class="cal-sched-note">'+escapeHtml(s.note)+'</div>':'')
+      +'</div>').join('')
+    : '<div style="font-size:13px;color:var(--text-secondary);text-align:center;padding:12px 0;">일정 없음</div>';
+
+  content.innerHTML=
+    '<div class="insp-modal-title">'+y+'년 '+m+'월 '+d+'일 ('+dow+')</div>'
+    +(isOff?'<div class="cal-off-badge"><span class="material-icons-round">event_busy</span> 휴무일</div>':'')
+    +offBtn
+    +'<div style="margin-top:14px;margin-bottom:6px;font-size:11px;font-weight:700;color:var(--text-secondary);letter-spacing:0.8px;">일정</div>'
+    +schedList
+    +'<button class="cal-add-sched-btn" onclick="openAddScheduleForm(\''+dateStr+'\')"><span class="material-icons-round">add</span> 일정 추가</button>'
+    +(isPast?'<button class="cal-goto-tl-btn" onclick="gotoTimeline(\''+dateStr+'\')"><span class="material-icons-round">timeline</span> 타임라인 보기</button>':'');
+  modal.classList.add('open');
+}
+
+function gotoTimeline(dateStr){
+  closeInspModal();
+  viewDate=dateStr;updateDateLabel();loadEvents();
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.dataset.page==='timeline')n.click();});
+}
+function toggleOffDay(dateStr){
+  if(offDays.has(dateStr))offDays.delete(dateStr);else offDays.add(dateStr);
+  saveOffDays();renderCalendar();calDateClick(dateStr);
+}
+function deleteSchedule(id,dateStr){
+  schedules=schedules.filter(s=>s.id!==id);
+  saveSchedules();renderCalendar();calDateClick(dateStr);
+}
+function openAddScheduleForm(dateStr){
+  const content=document.getElementById('inspModalContent');
+  const [y,m,d]=dateStr.split('-');
+  const dow=['일','월','화','수','목','금','토'][new Date(dateStr).getDay()];
+  const COLORS=[{v:'#34a853',l:'초록'},{v:'#4285f4',l:'파랑'},{v:'#9334e6',l:'보라'},{v:'#f9ab00',l:'노랑'},{v:'#e65100',l:'주황'},{v:'#ea4335',l:'빨강'},{v:'#0097a7',l:'청록'}];
+  content.innerHTML=
+    '<div class="insp-modal-title">일정 추가</div>'
+    +'<div style="font-size:13px;color:var(--accent-green);font-weight:700;margin-bottom:12px;">'+y+'년 '+m+'월 '+d+'일 ('+dow+')</div>'
+    +'<div class="other-field-label">제목</div>'
+    +'<input id="schedTitle" type="text" class="tl-manual-input" placeholder="일정 제목" style="margin-top:4px;">'
+    +'<div class="other-field-label" style="margin-top:12px;">시간 <span style="font-weight:400;color:var(--text-secondary);">(선택)</span></div>'
+    +'<label class="time-pill-label" style="margin-top:6px;max-width:160px;">'
+      +'<span class="time-pill-prefix">시각</span>'
+      +'<input type="time" id="schedTime" class="time-pill-input">'
+    +'</label>'
+    +'<div class="other-field-label" style="margin-top:12px;">색상</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">'
+    +COLORS.map((c,i)=>'<div class="sched-color-chip'+(i===0?' selected':'')+'" data-color="'+c.v+'" style="background:'+c.v+';" onclick="selectSchedColor(this)" title="'+c.l+'"></div>').join('')
+    +'</div>'
+    +'<div class="other-field-label" style="margin-top:12px;">메모 <span style="font-weight:400;color:var(--text-secondary);">(선택)</span></div>'
+    +'<textarea id="schedNote" class="note-input" rows="2" placeholder="메모" style="margin-top:6px;margin-bottom:12px;"></textarea>'
+    +'<button class="entry-add-btn" style="background:#34a853;" onclick="saveSchedule(\''+dateStr+'\')">저장</button>';
+}
+function selectSchedColor(el){
+  document.querySelectorAll('.sched-color-chip').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function saveSchedule(dateStr){
+  const title=document.getElementById('schedTitle').value.trim();
+  if(!title){toast('제목을 입력하세요');return;}
+  const time=document.getElementById('schedTime').value;
+  const note=document.getElementById('schedNote').value.trim();
+  const colorEl=document.querySelector('.sched-color-chip.selected');
+  const color=colorEl?colorEl.dataset.color:'#34a853';
+  schedules.push({id:Date.now(),date:dateStr,title,time,note,color});
+  saveSchedules();toast('일정 추가');renderCalendar();calDateClick(dateStr);
 }
 
 // ── 데이터 내보내기/가져오기 ──
