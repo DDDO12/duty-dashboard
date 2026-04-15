@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=FIXED_V21">
+<link rel="stylesheet" href="style.css?v=FIXED_V22">
 </head>
 <body>
 
@@ -35,7 +35,7 @@
       <h1>실시사항</h1>
       <div class="date" id="todayDate"></div>
     </div>
-    <span class="build-tag">V21</span>
+    <span class="build-tag">V22</span>
     <button class="sync-btn" onclick="syncToMaru()"><span class="material-icons-round">sync</span> 동기화</button>
     <button class="header-icon-btn" onclick="openSettingsPage()"><span class="material-icons-round">settings</span></button>
   </div>
@@ -175,6 +175,13 @@
   </div>
 
   <div class="page" id="page-overtime-cal">
+    <div style="margin:0 0 12px;font-size:12px;font-weight:700;color:var(--accent-teal);letter-spacing:1px;padding:0 4px;display:flex;align-items:center;gap:8px;">
+      <span class="material-icons-round" style="font-size:18px;">calendar_month</span> 월간 캘린더
+    </div>
+    <div id="calendarArea"></div>
+    <div style="margin:20px 0 12px;font-size:12px;font-weight:700;color:var(--status-error);letter-spacing:1px;padding:0 4px;display:flex;align-items:center;gap:8px;">
+      <span class="material-icons-round" style="font-size:18px;">more_time</span> 초과근무
+    </div>
     <div class="entry-add-card">
       <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddForm('ot')">
         <span class="card-title" style="margin:0;">+ 새 초과근무</span>
@@ -194,10 +201,6 @@
     <div class="ot-summary-strip"><div id="otTodayTotal">당일 누적 00:00</div><div id="otActiveCount">진행 중 0건</div></div>
     <div class="card-title" style="padding:0 4px;">진행/완료 초과근무</div>
     <div class="entry-board" id="otBoard"></div>
-    <div style="margin:20px 0 12px;font-size:12px;font-weight:700;color:var(--accent-teal);letter-spacing:1px;padding:0 4px;display:flex;align-items:center;gap:8px;">
-      <span class="material-icons-round" style="font-size:18px;">calendar_month</span> 월간 캘린더
-    </div>
-    <div id="calendarArea"></div>
   </div>
 
   <div class="page" id="page-settings">
@@ -320,6 +323,6 @@
   <div class="insp-modal" id="inspModalContent"></div>
 </div>
 
-<script src="app.js?v=FIXED_V21"></script>
+<script src="app.js?v=FIXED_V22"></script>
 </body>
 </html>
