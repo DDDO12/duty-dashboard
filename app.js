@@ -65,9 +65,33 @@ function init(){
     const hh=document.querySelector('.header').offsetHeight;
     document.getElementById('contextBar').style.top=hh+'px';
   });
-  setupNav();setupNavDrag();updateDateLabel();
+  setupNav();setupNavDrag();setupDateSwipe();updateDateLabel();
   loadPersonnel();loadEvents();restoreAllTimers();renderAllBoards();
   if(!liveRefreshHandle){liveRefreshHandle=setInterval(()=>{renderAllBoards();},1000);}
+}
+
+// ── 날짜 pill 스와이프 감지 ──
+function setupDateSwipe(){
+  const el=document.getElementById('dateLabel');
+  if(!el)return;
+  let sx=0,sy=0,moved=false;
+  el.addEventListener('touchstart',e=>{
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;moved=false;
+  },{passive:true});
+  el.addEventListener('touchmove',e=>{
+    const dx=e.touches[0].clientX-sx;
+    const dy=e.touches[0].clientY-sy;
+    if(Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy))moved=true;
+  },{passive:true});
+  el.addEventListener('touchend',e=>{
+    if(!moved)return; // 탭은 onclick이 처리
+    const dx=e.changedTouches[0].clientX-sx;
+    if(Math.abs(dx)>40){
+      if(dx<0)nextDay();else prevDay();
+      e.preventDefault();
+    }
+    moved=false;
+  },{passive:true});
 }
 
 function setupNav(){
