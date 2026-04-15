@@ -2022,7 +2022,7 @@ function renderCalendar(){
     }
     if(dayScheds.length){
       dayScheds.slice(0,2).forEach(s=>{
-        const sc=s.type==='휴가'?'#c62828':s.type==='휴무'?'#e53935':(s.color||'#34a853');
+        const sc=s.type==='휴가'?'#c62828':s.type==='휴무'?'#e53935':s.type==='근무'?'#1565c0':(s.color||'#34a853');
         html+='<div class="cal-event sched" style="background:'+sc+';opacity:0.92;">'+(s.time?s.time.slice(0,5)+' ':'')+escapeHtml(s.title)+'</div>';
       });
       if(dayScheds.length>2) html+='<div class="cal-event sched-more">+'+( dayScheds.length-2)+'</div>';
@@ -2137,10 +2137,15 @@ function openAddScheduleForm(dateStr){
     '<div class="insp-modal-title">일정 추가</div>'
     +'<div style="font-size:13px;color:var(--accent-green);font-weight:700;margin-bottom:12px;">'+y+'년 '+m+'월 '+d+'일 ('+dow+')</div>'
     +'<div class="other-field-label">유형</div>'
-    +'<div style="display:flex;gap:6px;margin-top:6px;">'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">'
     +'<button class="sched-type-btn active" data-type="일반" onclick="selectSchedType(this)">일반</button>'
+    +'<button class="sched-type-btn" data-type="근무" onclick="selectSchedType(this)">근무</button>'
     +'<button class="sched-type-btn" data-type="휴무" onclick="selectSchedType(this)">휴무</button>'
     +'<button class="sched-type-btn" data-type="휴가" onclick="selectSchedType(this)">휴가</button>'
+    +'</div>'
+    +'<div id="schedPersonRow" style="display:none;margin-top:10px;">'
+    +'<div class="other-field-label">대상자 <span style="font-weight:400;color:var(--text-secondary);font-size:11px;">(다음날 자동 휴무 지정)</span></div>'
+    +'<div id="schedPersonChips" class="person-selector" style="margin-top:6px;flex-wrap:wrap;gap:6px;"></div>'
     +'</div>'
     +'<div class="other-field-label" style="margin-top:12px;">제목</div>'
     +'<input id="schedTitle" type="text" class="tl-manual-input" placeholder="일정 제목" style="margin-top:4px;">'
@@ -2160,6 +2165,17 @@ function openAddScheduleForm(dateStr){
 function selectSchedType(el){
   document.querySelectorAll('.sched-type-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
+  const isGun=el.dataset.type==='근무';
+  const row=document.getElementById('schedPersonRow');
+  if(row) row.style.display=isGun?'':'none';
+  if(isGun){
+    const all=[...new Set([...personnel,...personnel2,...personnel3].map(p=>p.name))];
+    const chips=document.getElementById('schedPersonChips');
+    if(chips&&!chips.children.length){
+      chips.innerHTML=all.map(n=>'<div class="person-chip" onclick="this.classList.toggle(\'selected\')">'+ n+'</div>').join('')
+        ||(chips.innerHTML='<span style="font-size:12px;color:#aaa;">설정에서 인원을 추가하세요</span>');
+    }
+  }
 }
 function selectSchedColor(el){
   document.querySelectorAll('.sched-color-chip').forEach(c=>c.classList.remove('selected'));
@@ -2174,8 +2190,21 @@ function saveSchedule(dateStr){
   const color=colorEl?colorEl.dataset.color:'#34a853';
   const typeEl=document.querySelector('.sched-type-btn.active');
   const type=typeEl?typeEl.dataset.type:'일반';
-  schedules.push({id:Date.now(),date:dateStr,title,time,note,color,type});
-  saveSchedules();toast('일정 추가');renderCalendar();calDateClick(dateStr);
+  const schedColor=type==='근무'?'#1565c0':type==='휴가'?'#c62828':type==='휴무'?'#e53935':color;
+  schedules.push({id:Date.now(),date:dateStr,title,time,note,color:schedColor,type});
+  // 근무 → 다음날 대상자 자동 휴무
+  if(type==='근무'){
+    const selectedPersons=[...document.querySelectorAll('#schedPersonChips .person-chip.selected')].map(c=>c.textContent.trim());
+    if(selectedPersons.length){
+      const nd=new Date(dateStr);nd.setDate(nd.getDate()+1);
+      const nextStr=nd.getFullYear()+'-'+String(nd.getMonth()+1).padStart(2,'0')+'-'+String(nd.getDate()).padStart(2,'0');
+      selectedPersons.forEach(name=>{
+        schedules.push({id:Date.now()+Math.random(),date:nextStr,title:name+' 휴무',time:'',note:'근무 다음날 자동',color:'#e53935',type:'휴무',person:name,auto:true});
+      });
+      toast('일정 추가 + 다음날('+nextStr+') 휴무 자동 등록');
+    }else{toast('일정 추가');}
+  }else{toast('일정 추가');}
+  saveSchedules();renderCalendar();calDateClick(dateStr);
 }
 
 // ── 데이터 내보내기/가져오기 ──
