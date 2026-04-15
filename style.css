@@ -262,8 +262,8 @@ body.theme-light .header-left h1 {
 .date-nav {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 6px;
   padding: 12px 16px;
   background: var(--bg-surface);
   border-bottom: 3px solid var(--accent-green);
@@ -275,6 +275,7 @@ body.theme-light .header-left h1 {
   border: 1.5px solid rgba(52, 168, 83, 0.3);
   font-size: 20px;
   color: var(--accent-green);
+  flex-shrink: 0;
   cursor: pointer;
   padding: 6px;
   border-radius: 12px;
@@ -289,10 +290,15 @@ body.theme-light .header-left h1 {
 }
 
 .date-nav .current-date {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   cursor: pointer;
-  padding: 6px 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  text-align: center;
+  padding: 6px 4px;
   border-radius: 20px;
   color: var(--accent-green);
   border: 1.5px solid rgba(52, 168, 83, 0.25);
@@ -1422,16 +1428,17 @@ body.theme-light .entry-add-card {
   border-radius: 20px;
   border: none;
   color: #fff;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
   cursor: pointer;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 16px;
-  padding: 0 24px;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 8px;
   transition: filter 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0;
   animation: inspBtnIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
