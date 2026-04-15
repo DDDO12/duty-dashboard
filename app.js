@@ -1019,17 +1019,7 @@ function openManualForm(cat){
     el.innerHTML=personnel.map(p=>'<div class="person-chip" onclick="toggleModalManualPerson(\''+cat+'\',\''+escapeHtml(p.name)+'\',this)">'+escapeHtml(p.name)+'</div>').join('');
     makeTimePicker(sid);makeTimePicker(eid);
   }else if(cat==='other'){
-    // 기타·특이사항 수기
-    content.innerHTML='<div class="insp-modal-title" style="color:'+color+'">기타·특이사항 수기 입력</div>'
-      +'<div class="card-title">내용 <span style="font-weight:400;font-size:11px;color:#999;">(무슨 일이 발생했나요?)</span></div>'
-      +'<input type="text" id="mOtherTitle" placeholder="예: 정문 잠금장치 이상, 낯선 차량 등" class="tl-manual-input" style="margin-top:6px;border-color:#e65100;">'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">'
-        +'<div><div class="card-title">시작 시각</div><div id="mOtherStartTp" style="margin-top:4px;"></div></div>'
-        +'<div><div class="card-title">종료 시각</div><div id="mOtherEndTp" style="margin-top:4px;"></div></div>'
-      +'</div>'
-      +'<textarea class="note-input" id="mOtherNote" rows="2" placeholder="상세 내용 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
-      +'<button class="entry-add-btn" style="background:#e65100;" onclick="saveManualOther()">저장</button>';
-    makeTimePicker('mOtherStartTp');makeTimePicker('mOtherEndTp');
+    _renderOtherForm(content,color);
   }else{
     // 인수인계 수기 = 기존 풀폼
     selectedHvReceiver.clear();selectedHvGiver='';
@@ -1135,17 +1125,50 @@ async function saveManualCCTV(){
   if(await saveEvents()){toast(person+' CCTV 수기 등록');renderTimeline();renderInspectionBoard();inspCategory=null;selectedCctvPersons.clear();renderInspForm();}
   else{events.pop();toast('저장 실패.');};
 }
+function _renderOtherForm(content,color){
+  const allPersons=[...new Set([...personnel,...personnel2].map(p=>p.name))];
+  const now=nowTime();
+  content.innerHTML='<div class="insp-modal-title" style="color:'+color+'">기타·특이사항</div>'
+    // 제목
+    +'<div class="other-field-label">제목</div>'
+    +'<input id="mOtherTitle" type="text" class="tl-manual-input" placeholder="특이사항 제목을 입력하세요" style="margin-top:4px;">'
+    // 언제
+    +'<div class="other-field-label" style="margin-top:12px;">언제</div>'
+    +'<div class="other-time-row">'
+      +'<label class="time-pill-label">'
+        +'<span class="time-pill-prefix">시작</span>'
+        +'<input type="time" id="mOtherStartInput" class="time-pill-input" value="'+now+'">'
+      +'</label>'
+      +'<span class="time-pill-sep">~</span>'
+      +'<label class="time-pill-label">'
+        +'<span class="time-pill-prefix">종료</span>'
+        +'<input type="time" id="mOtherEndInput" class="time-pill-input" value="'+now+'">'
+      +'</label>'
+    +'</div>'
+    // 누가
+    +'<div class="other-field-label" style="margin-top:12px;">누가</div>'
+    +'<div class="person-selector" id="mOtherChips" style="margin-top:6px;">'
+      +allPersons.map(n=>'<div class="person-chip" onclick="this.classList.toggle(\'selected\')">'+escapeHtml(n)+'</div>').join('')
+    +'</div>'
+    // 무엇을/어떻게
+    +'<div class="other-field-label" style="margin-top:12px;">무엇을 / 어떻게</div>'
+    +'<textarea id="mOtherNote" class="note-input" rows="3" placeholder="상황을 구체적으로 기술하세요&#10;예) 정문 잠금장치 이상 발견 → 즉시 보고 조치" style="margin-top:6px;margin-bottom:12px;"></textarea>'
+    +'<button class="entry-add-btn" style="background:'+color+';" onclick="saveManualOther()">저장</button>';
+}
 async function saveManualOther(){
   const title=document.getElementById('mOtherTitle').value.trim();
-  if(!title){toast('내용을 입력하세요');return;}
-  const startEl=document.getElementById('mOtherStartTp');
-  const endEl=document.getElementById('mOtherEndTp');
-  const start=startEl?getTimePicker('mOtherStartTp'):getTimePicker('mOtherTp');
-  const end=endEl?getTimePicker('mOtherEndTp'):'';
+  if(!title){toast('제목을 입력하세요');return;}
+  const startEl=document.getElementById('mOtherStartInput');
+  const endEl=document.getElementById('mOtherEndInput');
+  const start=startEl?startEl.value:'';
+  const end=endEl?endEl.value:'';
+  const chips=[...document.querySelectorAll('#mOtherChips .person-chip.selected')].map(c=>c.textContent.trim());
+  const who=chips.join(', ');
   const note=document.getElementById('mOtherNote').value.trim();
   const diff=start&&end?Math.max(0,parseClockToMinutes(end)-parseClockToMinutes(start)):0;
   const duration=start&&end?formatHourMinute(diff):'';
-  const ev={time:end||start,type:'other',action:'note',subject:title,start_time:start,end_time:end,duration,note,manual:true};
+  const subject=title+(who?' ['+who+']':'');
+  const ev={time:end||start||nowTime(),type:'other',action:'note',subject,who,note,start_time:start,end_time:end,duration,manual:true};
   events.push(ev);
   if(await saveEvents()){toast('특이사항 기록 완료');renderTimeline();closeInspModal();}
   else{events.pop();toast('저장 실패.');}
@@ -1228,13 +1251,7 @@ function openTlManualForm(cat){
       +'<button class="entry-add-btn" style="background:'+color+';" onclick="saveModalHandover()">저장</button>';
     renderModalManualHvChips();makeTimePicker('mHvTp');
   }else if(cat==='other'){
-    content.innerHTML='<div class="insp-modal-title" style="color:'+color+'">기타·특이사항 수기 입력</div>'
-      +'<div class="card-title">내용</div>'
-      +'<input id="mOtherTitle" placeholder="예: 정문 잠금장치 이상" class="tl-manual-input" style="margin-top:4px;border-color:#e65100;">'
-      +_tlmTimeRangeHtml('mOtherStartTp','mOtherEndTp')
-      +'<textarea class="note-input" id="mOtherNote" rows="2" placeholder="상세 내용 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
-      +'<button class="entry-add-btn" style="background:#e65100;" onclick="saveManualOther()">저장</button>';
-    makeTimePicker('mOtherStartTp');makeTimePicker('mOtherEndTp');
+    _renderOtherForm(content,color);
   }
 }
 function tlmKeySelectOne(el){

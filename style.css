@@ -1551,6 +1551,65 @@ body.theme-light .entry-add-card {
   font-family: 'Noto Sans KR', sans-serif;
 }
 
+/* ── 기타·특이사항 폼 ── */
+.other-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+.other-time-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.time-pill-label {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+  background: var(--bg-input);
+  border: 1.5px solid var(--accent-green);
+  border-radius: 24px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.time-pill-prefix {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-green);
+  padding: 0 8px 0 14px;
+  white-space: nowrap;
+}
+.time-pill-input {
+  -webkit-appearance: none;
+  appearance: none;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-family: 'Noto Sans KR', sans-serif;
+  padding: 10px 12px 10px 0;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  outline: none;
+}
+.time-pill-input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+.time-pill-sep {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
 @keyframes inspBtnIn {
   from { opacity: 0; transform: translateY(24px) scale(0.9); }
   to { opacity: 1; transform: translateY(0) scale(1); }
