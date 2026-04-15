@@ -817,10 +817,11 @@ function selectInspMode(mode){
 }
 function renderInspForm(){
   const area=document.getElementById('inspFormArea');if(!area)return;
-  // 오늘 완료 여부 체크
+  // 오늘 완료 여부 체크 (CCTV는 하루 2회)
+  const cctvCount=events.filter(e=>e.type==='cctv'&&(e.action==='stop'||e.manual)).length;
   const done={
     patrol: events.some(e=>e.type==='patrol'&&(e.action==='stop'||e.manual)),
-    cctv:   events.some(e=>e.type==='cctv'&&(e.action==='stop'||e.manual)),
+    cctv:   cctvCount>=2,
     handover:events.some(e=>e.type==='handover'&&e.action==='complete')
   };
   const CATS=[
@@ -833,9 +834,15 @@ function renderInspForm(){
     +CATS.map((c,i)=>{
       const isDone=done[c.id]||false;
       const onclick=isDone?'':(c.id==='manual'?"openManualInspModal()":`openInspModal('${c.id}')`);
-      const doneOverlay=isDone?'<span class="insp-done-badge"><span class="material-icons-round">check_circle</span> 완료</span>':'';
+      // CCTV는 진행 카운트 배지 표시
+      let badge='';
+      if(isDone){
+        badge='<span class="insp-done-badge"><span class="material-icons-round">check_circle</span> 완료</span>';
+      } else if(c.id==='cctv'&&cctvCount>0){
+        badge='<span class="insp-done-badge" style="background:rgba(0,0,0,0.25);">'+cctvCount+'/2</span>';
+      }
       return '<button class="insp-big-btn'+(isDone?' done':'')+'" style="background:'+c.color+';animation-delay:'+(i*0.08+0.08)+'s;"'+(onclick?' onclick="'+onclick+'"':'')+' '+(isDone?'disabled':'')+' >'
-        +'<span class="material-icons-round">'+c.icon+'</span>'+c.label+doneOverlay+'</button>';
+        +'<span class="material-icons-round">'+c.icon+'</span>'+c.label+badge+'</button>';
     }).join('')
     +'</div>';
 }
