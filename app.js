@@ -70,28 +70,24 @@ function init(){
   if(!liveRefreshHandle){liveRefreshHandle=setInterval(()=>{renderAllBoards();},1000);}
 }
 
-// ── 날짜 pill 스와이프 감지 ──
+// ── 헤더 날짜 스와이프 감지 (header 전체 영역) ──
 function setupDateSwipe(){
-  const el=document.getElementById('dateLabel');
-  if(!el)return;
-  let sx=0,sy=0,moved=false;
-  el.addEventListener('touchstart',e=>{
-    sx=e.touches[0].clientX;sy=e.touches[0].clientY;moved=false;
-  },{passive:true});
-  el.addEventListener('touchmove',e=>{
-    const dx=e.touches[0].clientX-sx;
-    const dy=e.touches[0].clientY-sy;
-    if(Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy))moved=true;
-  },{passive:true});
-  el.addEventListener('touchend',e=>{
-    if(!moved)return; // 탭은 onclick이 처리
-    const dx=e.changedTouches[0].clientX-sx;
-    if(Math.abs(dx)>40){
+  const header=document.querySelector('.header');
+  if(!header)return;
+  let sx=0,sy=0,triggered=false;
+  header.addEventListener('pointerdown',e=>{
+    sx=e.clientX;sy=e.clientY;triggered=false;
+  });
+  header.addEventListener('pointermove',e=>{
+    if(triggered||!sx)return;
+    const dx=e.clientX-sx,dy=e.clientY-sy;
+    if(Math.abs(dx)>36&&Math.abs(dx)>Math.abs(dy)*1.5){
+      triggered=true;
       if(dx<0)nextDay();else prevDay();
-      e.preventDefault();
     }
-    moved=false;
-  },{passive:true});
+  });
+  header.addEventListener('pointerup',()=>{sx=0;triggered=false;});
+  header.addEventListener('pointercancel',()=>{sx=0;triggered=false;});
 }
 
 function setupNav(){
@@ -387,8 +383,22 @@ function renderTimeline(){
   }
 
   const SKIP_ACTIONS=new Set(['start','입장']);
-  const completed=timelineEvents
-    .map((ev,idx)=>({ev,idx}))
+  // 키 이벤트를 batch_id 기준으로 묶어서 대표 1개로 합치기
+  const mergedEvents=[];
+  const seenBatch=new Set();
+  timelineEvents.forEach((ev,idx)=>{
+    if(ev.type==='key'&&ev.batch_id){
+      if(seenBatch.has(ev.batch_id))return; // 이미 대표로 추가됨
+      seenBatch.add(ev.batch_id);
+      // 같은 batch_id 키들 수집
+      const batchKeys=timelineEvents.filter(e=>e.type==='key'&&e.batch_id===ev.batch_id);
+      const keyNames=batchKeys.map(e=>[e.key_name,e.key_number].filter(Boolean).join(' ')).join(' · ');
+      mergedEvents.push({ev:{...ev,_keyNames:keyNames,_keyCount:batchKeys.length},idx});
+    }else{
+      mergedEvents.push({ev,idx});
+    }
+  });
+  const completed=mergedEvents
     .filter(({ev})=>!SKIP_ACTIONS.has(ev.action))
     .filter(({ev})=>tlFilter==='all'||(tlFilter==='inspection'?(ev.type==='patrol'||ev.type==='cctv'||ev.type==='handover'||ev.type==='other'):ev.type===tlFilter))
     .sort((a,b)=>{
@@ -436,8 +446,8 @@ function renderTimeline(){
     }else if(ev.type==='key'){
       if(ev.location)badges+='<span class="tl-badge tl-badge-loc">'+escapeHtml(ev.location)+'</span>';
       if(ev.subject)persons='<span class="tl-badge tl-badge-person">'+escapeHtml(ev.subject)+'</span>';
-      const kinfo=[ev.key_name,ev.key_number].filter(Boolean).join('/');
-      if(kinfo)persons+='<span class="tl-badge tl-badge-loc">'+escapeHtml(kinfo)+'</span>';
+      const kinfo=ev._keyNames||[ev.key_name,ev.key_number].filter(Boolean).join(' ');
+      if(kinfo)persons+='<span class="tl-badge tl-badge-loc" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+escapeHtml(kinfo)+'">'+escapeHtml(kinfo)+'</span>';
     }else if(ev.type==='handover'){
       if(ev.handover)persons='<span class="tl-badge tl-badge-person">'+escapeHtml(ev.handover)+'</span>'
         +'<span class="tl-badge" style="color:var(--text-muted);padding:0 2px;font-size:11px;">→</span>';
@@ -535,6 +545,8 @@ function renderPersonChips(ctx){
   const sets={patrol:selectedPatrolPersons,cctv:selectedCctvPersons,ot:selectedOtPersons};
   const el=document.getElementById(map[ctx]);if(!el)return;
   const sel=sets[ctx];
+  const n=personnel.length;
+  el.style.cssText=personGridStyle(n);
   el.innerHTML=personnel.map(p=>'<div class="person-chip'+(sel.has(p.name)?' selected':'')+'" onclick="toggleBoardPerson(\''+ctx+'\',\''+p.name+'\')">'+p.name+'</div>').join('');
 }
 function toggleBoardPerson(ctx,name){
@@ -817,20 +829,24 @@ function getRoleRank(name){
   if(name.includes('관리병'))return 3;
   return 4;
 }
+function personGridStyle(count){
+  const cols=count<=4?2:count<=9?3:4;
+  return 'display:grid;grid-template-columns:repeat('+cols+',1fr);gap:8px;margin-top:6px;';
+}
 function renderKeyPersonSelector(){
   const el=document.getElementById('keyPersonSelector');if(!el)return;
   const src=personnel4.length?personnel4:[...personnel,...personnel2,...personnel3];
   const allNames=[...new Set(src.map(p=>p.name))];
-  el.innerHTML='<div class="person-selector" style="flex-wrap:wrap;gap:6px;margin-top:6px;">'
+  if(!allNames.length){el.innerHTML='<span style="font-size:12px;color:#aaa;">설정에서 인원을 추가하세요</span>';return;}
+  el.innerHTML='<div style="'+personGridStyle(allNames.length)+'">'
     +allNames.map(n=>'<div class="person-chip'+(selectedKeyPersons.has(n)?' selected':'')+'" onclick="toggleKeyPerson(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')
-    +'</div>'
-    +(allNames.length?'':'<span style="font-size:12px;color:#aaa;">설정에서 인원을 추가하세요</span>');
+    +'</div>';
 }
 function renderKeyPersonSelector2(){
   const el=document.getElementById('keyPersonSelector2');if(!el)return;
   const src=personnel4.length?personnel4:[...personnel,...personnel2,...personnel3];
   const allNames=[...new Set(src.map(p=>p.name))];
-  el.innerHTML='<div class="person-selector" style="flex-wrap:wrap;gap:6px;margin-top:6px;">'
+  el.innerHTML='<div style="'+personGridStyle(allNames.length)+'">'
     +allNames.map(n=>'<div class="person-chip'+(selectedKeyReceiver2===n?' selected':'')+'" onclick="selectKeyReceiver2(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')
     +'</div>';
 }
@@ -1431,16 +1447,18 @@ async function saveManualKey(){
 }
 // ── 열쇠탭 인계자 선택기 ──
 function renderHandoverChips(){
-  const el=document.getElementById('handoverChips');if(!el)return;
-  el.innerHTML=personnel3.map(p=>{
-    const sel=selectedHandoverPerson===p.name;
-    return '<div class="person-chip'+(sel?' selected':'')+'" onclick="toggleHandoverPerson(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>';
-  }).join('')||'<span style="font-size:12px;color:#aaa;">설정 > 열쇠 설정 > 인계자 관리에서 추가하세요</span>';
-  const el2=document.getElementById('handoverChips2');if(!el2)return;
-  el2.innerHTML=personnel3.map(p=>{
-    const sel=selectedHandoverPerson2===p.name;
-    return '<div class="person-chip'+(sel?' selected':'')+'" onclick="toggleHandoverPerson2(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>';
-  }).join('')||'<span style="font-size:12px;color:#aaa;">설정 > 열쇠 설정 > 인계자 관리에서 추가하세요</span>';
+  const n=personnel3.length;
+  const gs=personGridStyle(n);
+  const el=document.getElementById('handoverChips');
+  if(el){
+    if(n){el.style.cssText=gs;el.innerHTML=personnel3.map(p=>'<div class="person-chip'+(selectedHandoverPerson===p.name?' selected':'')+'" onclick="toggleHandoverPerson(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('');}
+    else{el.style.cssText='';el.innerHTML='<span style="font-size:12px;color:#aaa;">설정 > 인계자 관리에서 추가하세요</span>';}
+  }
+  const el2=document.getElementById('handoverChips2');
+  if(el2){
+    if(n){el2.style.cssText=gs;el2.innerHTML=personnel3.map(p=>'<div class="person-chip'+(selectedHandoverPerson2===p.name?' selected':'')+'" onclick="toggleHandoverPerson2(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('');}
+    else{el2.style.cssText='';el2.innerHTML='<span style="font-size:12px;color:#aaa;">설정 > 인계자 관리에서 추가하세요</span>';}
+  }
 }
 function toggleHandoverPerson(name){
   selectedHandoverPerson=selectedHandoverPerson===name?'':name;
@@ -1687,15 +1705,18 @@ async function addKey(action){
     if(!selectedKeyGroup||!selectedIssueKeyIds.size){toast('수령할 세부 키를 선택하세요');return;}
     const keys=getGroupKeys(selectedKeyGroup).filter(k=>selectedIssueKeyIds.has(k.id));
     const heldSigs=new Set(getCurrentHeldKeyEntries().map(k=>k.sig));
+    const t=nowTime();
+    const batchId='kb'+Date.now(); // 같은 수령 묶음 ID
     for(const key of keys){
-      const ev={time:nowTime(),type:'key',action:'issue',subject:holder,handover:selectedHandoverPerson,handover2:selectedHandoverPerson2,receiver2:selectedKeyReceiver2,location:selectedKeyGroup,key_id:key.id,key_name:key.name,key_number:key.number};
+      const ev={time:t,type:'key',action:'issue',subject:holder,handover:selectedHandoverPerson,handover2:selectedHandoverPerson2,receiver2:selectedKeyReceiver2,location:selectedKeyGroup,key_id:key.id,key_name:key.name,key_number:key.number,batch_id:batchId};
       if(heldSigs.has(keySigFromEvent(ev))){toast(makeKeyLabel(selectedKeyGroup,key)+' 는 이미 보유 중입니다');continue;}
       events.push(ev);created.push(ev);
     }
   }else{
     const held=getHolderHeldKeys(holder).filter(k=>selectedReturnKeyIds.has(k.sig));
     if(!held.length){toast('반납할 키를 선택하세요');return;}
-    held.forEach(k=>{const ev={time:nowTime(),type:'key',action:'return',subject:holder,location:k.group,key_id:k.key_id,key_name:k.key_name,key_number:k.key_number};events.push(ev);created.push(ev);});
+    const t=nowTime();
+    held.forEach(k=>{const ev={time:t,type:'key',action:'return',subject:holder,location:k.group,key_id:k.key_id,key_name:k.key_name,key_number:k.key_number};events.push(ev);created.push(ev);});
   }
   if(!created.length)return;
   const recent=JSON.parse(localStorage.getItem('keyRecentUse')||'{}');recent[holder]=Date.now();localStorage.setItem('keyRecentUse',JSON.stringify(recent));
@@ -1707,19 +1728,62 @@ function renderKeyBoard(){
   const board=document.getElementById('keyBoard');if(!board)return;
   const keyEvents=events.filter(e=>e.type==='key');
   if(!keyEvents.length){board.innerHTML='<div class="empty-state"><span class="material-icons-round">key_off</span><p>기록이 없어요</p></div>';return;}
-  const issued=[];
-  keyEvents.forEach((ev,i)=>{if(ev.action==='issue') issued.push({...ev,idx:i,matched:false,sig:keySigFromEvent(ev)});});
-  keyEvents.forEach(ev=>{if(ev.action==='return'){const sig=keySigFromEvent(ev);const match=issued.find(is=>!is.matched&&is.subject===ev.subject&&is.sig===sig);if(match){match.matched=true;match.returnTime=ev.time;}}});
-  const sorted=[...issued].sort((a,b)=>(a.matched?1:0)-(b.matched?1:0)||b.time.localeCompare(a.time));
-  board.innerHTML=sorted.map(is=>{
-    const label=escapeHtml(is.subject||'');
-    const keyLabel=escapeHtml([is.location,is.key_name,is.key_number].filter(Boolean).join(' / '));
-    const delBtn='<button class="btn-icon-sm btn-del" style="margin-left:6px;" onclick="deleteKeyEvent('+is.idx+')"><span class="material-icons-round">delete</span></button>';
-    if(is.matched){
-      return '<div class="entry-row done"><span class="entry-type" style="background:#4285f4;">반납</span><div class="entry-persons">'+label+'<div class="entry-meta">'+keyLabel+'</div></div><span style="font-size:12px;color:#999;margin-left:auto;">'+escapeHtml(is.time)+' ~ '+escapeHtml(is.returnTime)+'</span>'+delBtn+'</div>';
+
+  // ── 수령 이벤트를 batch_id 기준으로 묶기 (없으면 time+subject+location 으로 fallback) ──
+  const groupMap={};
+  keyEvents.forEach((ev,i)=>{
+    if(ev.action!=='issue')return;
+    const gk=ev.batch_id||(ev.time+'|'+ev.subject+'|'+ev.location);
+    if(!groupMap[gk]) groupMap[gk]={gk,subject:ev.subject,location:ev.location,time:ev.time,keys:[]};
+    groupMap[gk].keys.push({idx:i,key_id:ev.key_id,key_name:ev.key_name,key_number:ev.key_number,sig:keySigFromEvent(ev),matched:false,returnTime:null});
+  });
+
+  // 반납 매칭
+  keyEvents.forEach(ev=>{
+    if(ev.action!=='return')return;
+    const sig=keySigFromEvent(ev);
+    for(const gk in groupMap){
+      const g=groupMap[gk];
+      if(g.subject!==ev.subject)continue;
+      const k=g.keys.find(k=>!k.matched&&k.sig===sig);
+      if(k){k.matched=true;k.returnTime=ev.time;break;}
     }
-    return '<div class="entry-row"><span class="entry-type" style="background:#f9ab00;">수령</span><div class="entry-persons">'+label+'<div class="entry-meta">'+keyLabel+'</div></div><span style="font-size:12px;color:#1a73e8;margin-left:auto;">'+escapeHtml(is.time)+'</span><button style="background:#4285f4;color:#fff;border:none;padding:6px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;margin-left:8px;" onclick="returnKey(\''+String(is.subject||'').replace(/'/g,'&#39;')+'\',\''+String(is.location||'').replace(/'/g,'&#39;')+'\',\''+String(is.key_id||'').replace(/'/g,'&#39;')+'\')">반납</button>'+delBtn+'</div>';
+  });
+
+  const groups=Object.values(groupMap);
+  groups.forEach(g=>{g.allMatched=g.keys.every(k=>k.matched);});
+  groups.sort((a,b)=>(a.allMatched?1:0)-(b.allMatched?1:0)||b.time.localeCompare(a.time));
+
+  board.innerHTML=groups.map(g=>{
+    const label=escapeHtml(g.subject||'');
+    const keyNames=g.keys.map(k=>[k.key_name,k.key_number].filter(Boolean).join(' ')).join(' · ');
+    const meta=escapeHtml(g.location)+(keyNames?' / '+escapeHtml(keyNames):'');
+    const idxs=g.keys.map(k=>k.idx).join(',');
+    const subE=String(g.subject||'').replace(/'/g,"&#39;");
+    const locE=String(g.location||'').replace(/'/g,"&#39;");
+    const delBtn='<button class="btn-icon-sm btn-del" style="margin-left:6px;" onclick="deleteKeyGroup(\''+idxs+'\')"><span class="material-icons-round">delete</span></button>';
+    if(g.allMatched){
+      const lastRet=g.keys.map(k=>k.returnTime).filter(Boolean).sort().pop()||'';
+      return '<div class="entry-row done"><span class="entry-type" style="background:#4285f4;">반납완료</span><div class="entry-persons">'+label+'<div class="entry-meta">'+meta+'</div></div><span style="font-size:12px;color:#999;margin-left:auto;">'+escapeHtml(g.time)+' ~ '+escapeHtml(lastRet)+'</span>'+delBtn+'</div>';
+    }
+    return '<div class="entry-row"><span class="entry-type" style="background:#f9ab00;">수령</span><div class="entry-persons">'+label+'<div class="entry-meta">'+meta+'</div></div><span style="font-size:12px;color:#1a73e8;margin-left:auto;">'+escapeHtml(g.time)+'</span><button style="background:#4285f4;color:#fff;border:none;padding:6px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;margin-left:8px;" onclick="returnKeyGroup(\''+subE+'\',\''+locE+'\')">반납</button>'+delBtn+'</div>';
   }).join('');
+}
+async function returnKeyGroup(subject,location){
+  const held=getHolderHeldKeys(subject).filter(k=>k.group===location);
+  if(!held.length){toast('반납할 키가 없습니다');return;}
+  const t=nowTime();
+  held.forEach(k=>{events.push({time:t,type:'key',action:'return',subject,location,key_id:k.key_id,key_name:k.key_name,key_number:k.key_number});});
+  if(await saveEvents()){toast(subject+' '+location+' 전체 반납 ('+held.length+'개)');renderTimeline();renderKeyBoard();renderHeldKeySelector();}
+  else{held.forEach(()=>events.pop());toast('저장 실패.');}
+}
+async function deleteKeyGroup(idxListStr){
+  if(!confirm('이 수령 기록 전체를 삭제할까요?'))return;
+  const indices=idxListStr.split(',').map(Number).filter(n=>!isNaN(n)).sort((a,b)=>b-a);
+  const bk=[...events];
+  indices.forEach(i=>{if(i>=0&&i<events.length)events.splice(i,1);});
+  if(await saveEvents()){toast('삭제 완료');renderTimeline();renderKeyBoard();}
+  else{events=bk;toast('저장 실패.');renderKeyBoard();}
 }
 async function deleteKeyEvent(idx){
   if(idx<0||idx>=events.length)return;
