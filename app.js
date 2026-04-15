@@ -546,8 +546,17 @@ function renderPersonChips(ctx){
   const el=document.getElementById(map[ctx]);if(!el)return;
   const sel=sets[ctx];
   const n=personnel.length;
-  el.style.cssText=personGridStyle(n);
-  el.innerHTML=personnel.map(p=>'<div class="person-chip'+(sel.has(p.name)?' selected':'')+'" onclick="toggleBoardPerson(\''+ctx+'\',\''+p.name+'\')">'+p.name+'</div>').join('');
+  const cols=n<=4?2:n<=9?3:4;
+  const gs='display:grid;grid-template-columns:repeat('+cols+',1fr);gap:8px;margin-top:6px;';
+  el.innerHTML='<div class="pchip-grid" style="'+gs+'">'
+    +personnel.map(p=>'<div class="person-chip'+(sel.has(p.name)?' selected':'')+'" onclick="toggleBoardPerson(\''+ctx+'\',\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('')
+    +'</div>';
+  // ctx가 단일선택(patrol/cctv)이면 선택 시 닫힘 애니메이션
+  if(ctx!=='ot'&&sel.size===1){
+    const selName=[...sel][0];
+    const g=el.querySelector('.pchip-grid');
+    if(g)_chipGridSelect(g,selName,()=>renderPersonChips(ctx));
+  }
 }
 function toggleBoardPerson(ctx,name){
   const sets={patrol:selectedPatrolPersons,cctv:selectedCctvPersons,ot:selectedOtPersons};
@@ -833,32 +842,72 @@ function personGridStyle(count){
   const cols=count<=4?2:count<=9?3:4;
   return 'display:grid;grid-template-columns:repeat('+cols+',1fr);gap:8px;margin-top:6px;';
 }
+
+// ── 인원 칩 선택 애니메이션 (서랍 닫힘) ──
+function _chipGridSelect(gridEl, selectedName, onReopen){
+  if(!gridEl)return;
+  gridEl.classList.add('closing');
+  setTimeout(()=>{
+    gridEl.classList.remove('closing');
+    gridEl.classList.add('closed');
+    // 변경 버튼 추가
+    const old=gridEl.querySelector('.pchip-change-btn');if(old)old.remove();
+    const btn=document.createElement('button');
+    btn.className='pchip-change-btn';btn.textContent='변경';
+    btn.onclick=()=>{gridEl.classList.remove('closed');if(onReopen)onReopen();};
+    gridEl.appendChild(btn);
+  },220);
+}
+function _buildChipGrid(names, selectedSet, onclick, excludeSet){
+  const avail=names.filter(n=>!excludeSet||!excludeSet.has(n));
+  const sel=avail.find(n=>selectedSet&&selectedSet.has?selectedSet.has(n):(selectedSet===n));
+  const cols=avail.length<=4?2:avail.length<=9?3:4;
+  const gs='display:grid;grid-template-columns:repeat('+cols+',1fr);gap:8px;margin-top:6px;';
+  return {html:'<div class="pchip-grid" style="'+gs+'">'
+    +avail.map(n=>'<div class="person-chip'+(sel===n?' selected':'')+'" onclick="'+onclick.replace('__N__',n.replace(/'/g,"\\'"))+'">'+escapeHtml(n)+'</div>').join('')
+    +'</div>',hasSel:!!sel,selName:sel};
+}
+
 function renderKeyPersonSelector(){
   const el=document.getElementById('keyPersonSelector');if(!el)return;
   const src=personnel4.length?personnel4:[...personnel,...personnel2,...personnel3];
   const allNames=[...new Set(src.map(p=>p.name))];
   if(!allNames.length){el.innerHTML='<span style="font-size:12px;color:#aaa;">설정에서 인원을 추가하세요</span>';return;}
-  el.innerHTML='<div style="'+personGridStyle(allNames.length)+'">'
-    +allNames.map(n=>'<div class="person-chip'+(selectedKeyPersons.has(n)?' selected':'')+'" onclick="toggleKeyPerson(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')
+  // 하키(2)에서 선택된 인원 제외
+  const exclude=selectedKeyReceiver2?new Set([selectedKeyReceiver2]):null;
+  const avail=allNames.filter(n=>!exclude||!exclude.has(n));
+  const cols=avail.length<=4?2:avail.length<=9?3:4;
+  const selName=[...selectedKeyPersons][0];
+  el.innerHTML='<div class="pchip-grid" style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:8px;margin-top:6px;">'
+    +avail.map(n=>'<div class="person-chip'+(selectedKeyPersons.has(n)?' selected':'')+'" onclick="toggleKeyPerson(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')
     +'</div>';
+  if(selName){const g=el.querySelector('.pchip-grid');if(g)_chipGridSelect(g,selName,()=>renderKeyPersonSelector());}
 }
 function renderKeyPersonSelector2(){
   const el=document.getElementById('keyPersonSelector2');if(!el)return;
   const src=personnel4.length?personnel4:[...personnel,...personnel2,...personnel3];
   const allNames=[...new Set(src.map(p=>p.name))];
-  el.innerHTML='<div style="'+personGridStyle(allNames.length)+'">'
-    +allNames.map(n=>'<div class="person-chip'+(selectedKeyReceiver2===n?' selected':'')+'" onclick="selectKeyReceiver2(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')
+  // 상키(1)에서 선택된 인원 제외
+  const excl=[...selectedKeyPersons];
+  const avail=allNames.filter(n=>!excl.includes(n));
+  const cols=avail.length<=4?2:avail.length<=9?3:4;
+  el.innerHTML='<div class="pchip-grid" style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:8px;margin-top:6px;">'
+    +avail.map(n=>'<div class="person-chip'+(selectedKeyReceiver2===n?' selected':'')+'" onclick="selectKeyReceiver2(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')
     +'</div>';
+  if(selectedKeyReceiver2){const g=el.querySelector('.pchip-grid');if(g)_chipGridSelect(g,selectedKeyReceiver2,()=>renderKeyPersonSelector2());}
 }
 function selectKeyReceiver2(name){
   selectedKeyReceiver2=selectedKeyReceiver2===name?null:name;
   renderKeyPersonSelector2();
+  // 상키에서도 해당 인원 재렌더 (제외 반영)
+  renderKeyPersonSelector();
 }
 function toggleKeyPerson(name){
   if(selectedKeyPersons.has(name))selectedKeyPersons.clear();
   else{selectedKeyPersons.clear();selectedKeyPersons.add(name);}
   selectedReturnKeyIds.clear();
   renderKeyPersonSelector();
+  renderKeyPersonSelector2(); // 하키에서 해당 인원 제외
   renderHeldKeySelector();
   updateKeyBtns();
 }
@@ -1447,17 +1496,28 @@ async function saveManualKey(){
 }
 // ── 열쇠탭 인계자 선택기 ──
 function renderHandoverChips(){
-  const n=personnel3.length;
-  const gs=personGridStyle(n);
+  const names=personnel3.map(p=>p.name);
+  const cols=names.length<=4?2:names.length<=9?3:4;
+  const gs='display:grid;grid-template-columns:repeat('+cols+',1fr);gap:8px;margin-top:6px;';
+  // 상키 인계자 — 하키 선택 제외
   const el=document.getElementById('handoverChips');
   if(el){
-    if(n){el.style.cssText=gs;el.innerHTML=personnel3.map(p=>'<div class="person-chip'+(selectedHandoverPerson===p.name?' selected':'')+'" onclick="toggleHandoverPerson(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('');}
-    else{el.style.cssText='';el.innerHTML='<span style="font-size:12px;color:#aaa;">설정 > 인계자 관리에서 추가하세요</span>';}
+    if(names.length){
+      const avail=names.filter(n=>n!==selectedHandoverPerson2);
+      el.innerHTML='<div class="pchip-grid" style="'+gs+'">'
+        +avail.map(p=>'<div class="person-chip'+(selectedHandoverPerson===p?' selected':'')+'" onclick="toggleHandoverPerson(\''+escapeHtml(p)+'\')">'+escapeHtml(p)+'</div>').join('')+'</div>';
+      if(selectedHandoverPerson){const g=el.querySelector('.pchip-grid');if(g)_chipGridSelect(g,selectedHandoverPerson,()=>renderHandoverChips());}
+    }else{el.innerHTML='<span style="font-size:12px;color:#aaa;">설정 > 인계자 관리에서 추가하세요</span>';}
   }
+  // 하키 인계자 — 상키 선택 제외
   const el2=document.getElementById('handoverChips2');
   if(el2){
-    if(n){el2.style.cssText=gs;el2.innerHTML=personnel3.map(p=>'<div class="person-chip'+(selectedHandoverPerson2===p.name?' selected':'')+'" onclick="toggleHandoverPerson2(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('');}
-    else{el2.style.cssText='';el2.innerHTML='<span style="font-size:12px;color:#aaa;">설정 > 인계자 관리에서 추가하세요</span>';}
+    if(names.length){
+      const avail2=names.filter(n=>n!==selectedHandoverPerson);
+      el2.innerHTML='<div class="pchip-grid" style="'+gs+'">'
+        +avail2.map(p=>'<div class="person-chip'+(selectedHandoverPerson2===p?' selected':'')+'" onclick="toggleHandoverPerson2(\''+escapeHtml(p)+'\')">'+escapeHtml(p)+'</div>').join('')+'</div>';
+      if(selectedHandoverPerson2){const g2=el2.querySelector('.pchip-grid');if(g2)_chipGridSelect(g2,selectedHandoverPerson2,()=>renderHandoverChips());}
+    }else{el2.innerHTML='<span style="font-size:12px;color:#aaa;">설정 > 인계자 관리에서 추가하세요</span>';}
   }
 }
 function toggleHandoverPerson(name){

@@ -1094,13 +1094,39 @@ body.theme-light .entry-add-card {
   cursor: pointer;
   background: var(--bg-surface);
   color: var(--text-secondary);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  transition: transform 0.22s cubic-bezier(0.4,0,0.6,1), opacity 0.2s ease, background 0.15s, border-color 0.15s, color 0.15s;
+  transform-origin: center;
 }
-
 .person-chip.selected {
   border-color: var(--person-chip-selected-border);
   background: var(--person-chip-selected-bg);
   color: var(--person-chip-selected-color);
+  font-weight: 700;
+}
+/* 칩 닫힘: 선택 후 나머지 스며들어 사라짐 */
+.pchip-grid.closing .person-chip:not(.selected) {
+  transform: scale(0.3);
+  opacity: 0;
+  pointer-events: none;
+}
+/* 닫힌 상태: 선택된 칩 1개 + 변경 버튼만 */
+.pchip-grid.closed {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+.pchip-grid.closed .person-chip:not(.selected) { display: none; }
+.pchip-change-btn {
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .entry-add-btn {
