@@ -35,6 +35,14 @@ function applyTheme(){
   document.body.classList.toggle('theme-light',!isDark);
 }
 
+// ── 뒤로가기 방지 (앱 모드에서 크롬으로 이탈 차단) ──
+(function preventBack(){
+  history.pushState(null,'',location.href);
+  window.addEventListener('popstate',()=>{
+    history.pushState(null,'',location.href);
+  });
+})();
+
 // ── 초기화 ──
 function init(){
   // 스플래시 스크린 제거

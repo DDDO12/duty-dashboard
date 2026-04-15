@@ -4,13 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>실시사항</title>
+<link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=FIXED_V18">
+<link rel="stylesheet" href="style.css?v=FIXED_V19">
 </head>
 <body>
 
@@ -32,7 +35,7 @@
       <h1>실시사항</h1>
       <div class="date" id="todayDate"></div>
     </div>
-    <span class="build-tag">V18</span>
+    <span class="build-tag">V19</span>
     <button class="sync-btn" onclick="syncToMaru()"><span class="material-icons-round">sync</span> 동기화</button>
     <button class="header-icon-btn" onclick="openSettingsPage()"><span class="material-icons-round">settings</span></button>
   </div>
@@ -316,6 +319,6 @@
   <div class="insp-modal" id="inspModalContent"></div>
 </div>
 
-<script src="app.js?v=FIXED_V18"></script>
+<script src="app.js?v=FIXED_V19"></script>
 </body>
 </html>
