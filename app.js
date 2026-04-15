@@ -800,15 +800,18 @@ function selectInspMode(mode){
 function renderInspForm(){
   const area=document.getElementById('inspFormArea');if(!area)return;
   const CATS=[
-    {id:'patrol', label:'순찰', color:'#34a853', icon:'directions_walk'},
-    {id:'cctv',   label:'CCTV', color:'#9334e6', icon:'videocam'},
-    {id:'handover',label:'인수인계',color:'#0097a7',icon:'swap_horiz'}
+    {id:'patrol',   label:'순찰',   color:'#34a853', icon:'directions_walk'},
+    {id:'cctv',     label:'CCTV',   color:'#9334e6', icon:'videocam'},
+    {id:'handover', label:'인수인계',color:'#0097a7', icon:'swap_horiz'},
+    {id:'manual',   label:'수기 입력',color:'#546e7a', icon:'edit_note'}
   ];
-  area.innerHTML=CATS.map(c=>
-    '<button class="insp-big-btn" style="background:'+c.color+';" onclick="openInspModal(\''+c.id+'\')">'
-      +'<span class="material-icons-round">'+c.icon+'</span>'+c.label+'</button>'
-  ).join('')
-    +'<button class="insp-manual-btn" onclick="openManualInspModal()">✏️ 수기 입력</button>';
+  area.innerHTML='<div class="insp-grid">'
+    +CATS.map((c,i)=>{
+      const onclick=c.id==='manual'?"openManualInspModal()":`openInspModal('${c.id}')`;
+      return '<button class="insp-big-btn" style="background:'+c.color+';animation-delay:'+(i*0.08+0.08)+'s;" onclick="'+onclick+'">'
+        +'<span class="material-icons-round">'+c.icon+'</span>'+c.label+'</button>';
+    }).join('')
+    +'</div>';
 }
 // ── 점검 모달 ──
 function openInspModal(cat){
