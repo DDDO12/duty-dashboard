@@ -2223,7 +2223,7 @@ body.theme-light .entry-add-card {
 .cal-day-name.sun { color: var(--status-error); }
 .cal-day-name.sat { color: var(--accent-teal); }
 .cal-cell {
-  min-height: 52px;
+  min-height: 64px;
   padding: 4px 2px;
   border-radius: 8px;
   background: var(--bg-surface);
@@ -2231,8 +2231,9 @@ body.theme-light .entry-add-card {
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 2px;
+  overflow: hidden;
   transition: background 0.15s, transform 0.1s;
 }
 .cal-cell:active {
@@ -2258,11 +2259,13 @@ body.theme-light .entry-add-card {
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1;
+  text-align: center;
+  flex-shrink: 0;
 }
 .cal-event {
   font-size: 8px;
   font-weight: 700;
-  padding: 1px 4px;
+  padding: 1px 3px;
   border-radius: 4px;
   white-space: nowrap;
   overflow: hidden;
