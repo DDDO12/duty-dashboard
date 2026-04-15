@@ -7,7 +7,9 @@ let entryTypes=['탄약고','무기고','BL탄약고','교탄탄약고','간이�
 let tlFilter='all'; // 타임라인 필터 상태
 let selectedKey=null;
 let selectedKeyPersons=new Set();
-let selectedHandoverPerson=''; // 인계자 (열쇠탭)
+let selectedHandoverPerson=''; // 인계자1 (열쇠탭)
+let selectedHandoverPerson2=''; // 인계자2 (열쇠탭)
+let selectedKeyReceiver2=null; // 인수자2 (열쇠탭) — rendered by renderKeyPersonSelector2
 let selectedHvReceiver=new Set(); // 인수자 (점검탭 인수인계)
 let selectedHvGiver=''; // 인계자 (점검탭 인수인계)
 let inspCategory=null; // 'patrol'|'cctv'|'handover'
@@ -68,7 +70,7 @@ function init(){
 function setupNav(){
   const pageRender={
     'timeline': ()=>{renderTimeline();},
-    'entry-keys': ()=>{renderEntryBoard();renderEntryForm();renderKeyBoard();renderKeyPersonSelector();renderKeyPresets();renderKeyDetailSelector();renderHeldKeySelector();},
+    'entry-keys': ()=>{renderEntryBoard();renderEntryForm();renderKeyBoard();renderKeyPersonSelector();renderKeyPersonSelector2();renderKeyPresets();renderKeyDetailSelector();renderHeldKeySelector();},
     'inspection':()=>{renderInspectionBoard();renderInspForm();},
     'overtime-cal': ()=>{renderOTBoard();renderOTSummary();renderCalendar();},
     'settings': ()=>{renderSettings();renderKeyCatalogEditor();}
@@ -389,41 +391,47 @@ function renderTimeline(){
       return{text:action||'',cls:'tl-badge-action-other'};
     }
     const al=actionLabel(ev.type,ev.action);
-    const noteTxt=ev.note?'<div class="tl-detail-group"><b>메모</b> '+escapeHtml(ev.note)+'</div>':'';
     const start=ev.start_time||'';
     const end=ev.end_time||ev.time||'';
-    const timeBlock=start?('<div class="tl-time-range"><span class="tl-time-start">'+escapeHtml(start)+'</span><span class="tl-time-sep">~</span><span class="tl-time-end">'+escapeHtml(end)+'</span></div>'):( '<div class="tl-time-single">'+escapeHtml(end)+'</div>' );
+    // 시간 열 (좌)
+    const timeLeft=start
+      ?'<div class="tl-ts">'+escapeHtml(start)+'</div><div class="tl-te">→ '+escapeHtml(end)+'</div>'
+      :'<div class="tl-ts">'+escapeHtml(end)+'</div>';
     const duration=ev.duration?'<div class="tl-duration">'+escapeHtml(ev.duration)+'</div>':'';
+    // 배지 (카테고리 오른쪽)
     let badges='<span class="tl-badge '+al.cls+'">'+al.text+'</span>';
-    if(ev.manual)badges+='<span class="tl-badge" style="background:#e0f2fe;color:#0369a1;border:none;font-size:10px;padding:2px 7px;">수기</span>';
-    let detail='';
+    if(ev.manual)badges+='<span class="tl-badge tl-badge-manual">수기</span>';
+    // 인원·내용 칩 (항상 표시)
+    let persons='';
     if(ev.type==='entry'){
       if(ev.location)badges+='<span class="tl-badge tl-badge-loc">'+escapeHtml(ev.location)+'</span>';
-      detail='<div class="tl-detail-group">'+escapeHtml([ev.subject,ev.subject2].filter(Boolean).join(', '))+'</div>'+noteTxt;
+      persons='<span class="tl-badge tl-badge-person">'+escapeHtml([ev.subject,ev.subject2].filter(Boolean).join(', '))+'</span>';
     }else if(ev.type==='patrol'||ev.type==='cctv'){
-      detail='<div class="tl-detail-group">'+escapeHtml(ev.subject||'')+'</div>'+noteTxt;
+      if(ev.subject)persons='<span class="tl-badge tl-badge-person">'+escapeHtml(ev.subject)+'</span>';
     }else if(ev.type==='key'){
       if(ev.location)badges+='<span class="tl-badge tl-badge-loc">'+escapeHtml(ev.location)+'</span>';
-      detail='<div class="tl-detail-group">'+escapeHtml(ev.subject||'')+'</div>'
-        +'<div class="tl-detail-group">'+escapeHtml([ev.location,ev.key_name,ev.key_number].filter(Boolean).join(' / '))+'</div>'+noteTxt;
+      if(ev.subject)persons='<span class="tl-badge tl-badge-person">'+escapeHtml(ev.subject)+'</span>';
+      const kinfo=[ev.key_name,ev.key_number].filter(Boolean).join('/');
+      if(kinfo)persons+='<span class="tl-badge tl-badge-loc">'+escapeHtml(kinfo)+'</span>';
     }else if(ev.type==='handover'){
-      if(ev.handover)badges+='<span class="tl-badge tl-badge-loc" style="background:#e0f7fa;color:#006064;">인계: '+escapeHtml(ev.handover)+'</span>';
-      detail='<div class="tl-detail-group"><b>인수자</b> '+escapeHtml(ev.subject||'')+'</div>'
-        +(ev.handover?'<div class="tl-detail-group"><b>인계자</b> '+escapeHtml(ev.handover)+'</div>':'')
-        +noteTxt;
+      if(ev.handover)persons='<span class="tl-badge tl-badge-person">'+escapeHtml(ev.handover)+'</span>'
+        +'<span class="tl-badge" style="color:var(--text-muted);padding:0 2px;font-size:11px;">→</span>';
+      if(ev.subject)persons+='<span class="tl-badge tl-badge-person">'+escapeHtml(ev.subject)+'</span>';
     }else if(ev.type==='other'){
-      detail='<div class="tl-detail-group">'+escapeHtml(ev.subject||'')+'</div>'+noteTxt;
+      if(ev.subject)persons='<span class="tl-badge tl-badge-person">'+escapeHtml(ev.subject)+'</span>';
     }
-    const hasDetail=detail.trim()!=='';
-    const toggleBar=hasDetail?'<button class="tl-toggle-bar" id="tlbtn-'+oi+'" onclick="tlToggle(\'tld-'+oi+'\',\'tlbtn-'+oi+'\')"><span class="material-icons-round">expand_more</span><span>상세</span></button>':'';
+    // 메모만 아코디언으로
+    const noteDetail=ev.note?'<div class="tl-detail-group"><b>메모</b> '+escapeHtml(ev.note)+'</div>':'';
+    const toggleBar=noteDetail?'<button class="tl-toggle-bar" id="tlbtn-'+oi+'" onclick="tlToggle(\'tld-'+oi+'\',\'tlbtn-'+oi+'\')"><span class="material-icons-round">expand_more</span><span>메모</span></button>':'';
     const stripe=ev.location&&locColor[ev.location]?'border-left:4px solid '+locColor[ev.location]+';padding-left:8px;':'';
-    return '<div class="timeline-item tl-type-'+ev.type+(checked?' checked':'')+'" style="flex-wrap:wrap;'+stripe+'">'
+    return '<div class="timeline-item tl-type-'+ev.type+(checked?' checked':'')+'" style="'+stripe+'">'
       +'<input type="checkbox" class="timeline-cb" '+(checked?'checked':'')+' onchange="toggleCheck('+oi+',this)" onclick="event.stopPropagation()">'
-      +'<div class="tl-main">'
-        +'<div class="tl-head"><div class="tl-time-block">'+timeBlock+duration+'</div><span class="timeline-tag '+tc+'">'+tg+'</span>'+badges+'</div>'
+      +'<div class="tl-split">'
+        +'<div class="tl-split-time">'+timeLeft+duration+'</div>'
+        +'<div class="tl-split-info"><span class="timeline-tag '+tc+'">'+tg+'</span>'+badges+persons+'</div>'
       +'</div>'
       +'<span class="timeline-del material-icons-round" onclick="deleteEvent('+oi+')">close</span>'
-      +(hasDetail?'<div class="tl-detail" id="tld-'+oi+'">'+detail+'</div>':'')
+      +(noteDetail?'<div class="tl-detail" id="tld-'+oi+'">'+noteDetail+'</div>':'')
       +toggleBar
       +'</div>';
   }).join('');
@@ -708,47 +716,69 @@ function restoreAllTimers(){
 // ── 공통 함수 ──
 function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 
-// ── 시간 스피너 (Time Picker) ──
-const _timePickers={};
-function makeTimePicker(containerId,initTime){
-  const t=initTime||nowTime();
-  const parts=t.split(':');
-  const h=parseInt(parts[0])||0,m=parseInt(parts[1])||0;
-  _timePickers[containerId]={h,m};
-  _renderTp(containerId);
-}
-function getTimePicker(containerId){
-  const s=_timePickers[containerId];
-  if(!s)return nowTime();
-  return String(s.h).padStart(2,'0')+':'+String(s.m).padStart(2,'0');
-}
-function _renderTp(id){
+// ── 드럼롤 시간 피커 ──
+const _DRUM_IH=44; // item height px
+const DRUM_H=Array.from({length:24},(_,i)=>String(i).padStart(2,'0'));
+const DRUM_M=Array.from({length:12},(_,i)=>String(i*5).padStart(2,'0'));
+
+function makeTimePicker(id,initTime){
+  const [hh,mm]=(initTime||nowTime()).split(':').map(Number);
+  const hi=Math.max(0,Math.min(23,hh||0));
+  const mi=Math.max(0,Math.min(11,Math.round((mm||0)/5)%12));
   const el=document.getElementById(id);if(!el)return;
-  const s=_timePickers[id];if(!s)return;
-  const ampm=s.h<12?'오전':'오후';
-  const h12=s.h%12||12;
-  el.innerHTML='<div class="tp-wrap">'
-    +'<div class="tp-col"><button class="tp-btn" ontouchstart="" onclick="_tpAdj(\''+id+'\',\'ap\',1)">▲</button>'
-    +'<div class="tp-val tp-ampm">'+ampm+'</div>'
-    +'<button class="tp-btn" ontouchstart="" onclick="_tpAdj(\''+id+'\',\'ap\',-1)">▼</button></div>'
-    +'<div class="tp-col"><button class="tp-btn" ontouchstart="" onclick="_tpAdj(\''+id+'\',\'h\',1)">▲</button>'
-    +'<div class="tp-val">'+String(h12).padStart(2,'0')+'</div>'
-    +'<button class="tp-btn" ontouchstart="" onclick="_tpAdj(\''+id+'\',\'h\',-1)">▼</button></div>'
-    +'<div class="tp-sep">:</div>'
-    +'<div class="tp-col"><button class="tp-btn" ontouchstart="" onclick="_tpAdj(\''+id+'\',\'m\',1)">▲</button>'
-    +'<div class="tp-val">'+String(s.m).padStart(2,'0')+'</div>'
-    +'<button class="tp-btn" ontouchstart="" onclick="_tpAdj(\''+id+'\',\'m\',-1)">▼</button></div>'
-    +'</div>';
+  el.innerHTML='<div class="drum-picker">'+_drumColHtml(id+'-h',DRUM_H,hi)+'<div class="drum-sep">:</div>'+_drumColHtml(id+'-m',DRUM_M,mi)+'</div>';
+  setTimeout(()=>{_attachDrum(id+'-h',DRUM_H.length);_attachDrum(id+'-m',DRUM_M.length);},0);
 }
-function _tpAdj(id,field,delta){
-  const s=_timePickers[id];if(!s)return;
-  if(field==='ap'){s.h=(s.h+12)%24;}
-  else if(field==='h'){
-    const pm=s.h>=12;let h12=s.h%12||12;h12+=delta;
-    if(h12>12)h12=1;if(h12<1)h12=12;
-    s.h=pm?(h12%12)+12:h12%12;
-  }else if(field==='m'){s.m=(s.m+delta+60)%60;}
-  _renderTp(id);
+function getTimePicker(id){
+  const hc=document.getElementById(id+'-h');
+  const mc=document.getElementById(id+'-m');
+  const hi=hc?Math.min(23,parseInt(hc.dataset.idx)||0):new Date().getHours();
+  const mi=mc?Math.min(11,parseInt(mc.dataset.idx)||0):0;
+  return DRUM_H[hi]+':'+DRUM_M[mi];
+}
+function _drumColHtml(colId,items,idx){
+  const safeIdx=Math.max(0,Math.min(items.length-1,idx));
+  return '<div class="drum-col" id="'+colId+'" data-idx="'+safeIdx+'" data-count="'+items.length+'">'
+    +'<div class="drum-list" style="transform:translateY('+((1-safeIdx)*_DRUM_IH)+'px)">'
+    +items.map((v,i)=>'<div class="drum-item'+(i===safeIdx?' sel':'')+'">'+ v+'</div>').join('')
+    +'</div></div>';
+}
+function _attachDrum(colId,count){
+  const col=document.getElementById(colId);if(!col)return;
+  const list=col.querySelector('.drum-list');
+  let startY=0,startOffset=0,dragging=false;
+  function getOffset(){const m=list.style.transform.match(/translateY\((-?[\d.]+)px\)/);return m?parseFloat(m[1]):0;}
+  function idxToOffset(i){return(1-i)*_DRUM_IH;}
+  function offsetToIdx(o){return Math.round((_DRUM_IH-o)/_DRUM_IH);}
+  function clamp(i){return Math.max(0,Math.min(count-1,i));}
+  function snap(animate){
+    const idx=clamp(offsetToIdx(getOffset()));
+    col.dataset.idx=idx;
+    list.style.transition=animate?'transform .2s cubic-bezier(.25,.8,.25,1)':'none';
+    list.style.transform='translateY('+idxToOffset(idx)+'px)';
+    list.querySelectorAll('.drum-item').forEach((el,i)=>el.classList.toggle('sel',i===idx));
+  }
+  function onStart(e){
+    dragging=true;startY=e.touches?e.touches[0].clientY:e.clientY;
+    startOffset=getOffset();list.style.transition='none';e.preventDefault();
+  }
+  function onMove(e){
+    if(!dragging)return;
+    const y=e.touches?e.touches[0].clientY:e.clientY;
+    const raw=startOffset+(y-startY);
+    const minO=idxToOffset(count-1)-_DRUM_IH*0.6;
+    const maxO=idxToOffset(0)+_DRUM_IH*0.6;
+    list.style.transform='translateY('+Math.max(minO,Math.min(maxO,raw))+'px)';
+    list.querySelectorAll('.drum-item').forEach((el,i)=>el.classList.toggle('sel',i===clamp(offsetToIdx(raw))));
+    e.preventDefault();
+  }
+  function onEnd(){if(!dragging)return;dragging=false;snap(true);}
+  col.addEventListener('touchstart',onStart,{passive:false});
+  col.addEventListener('touchmove',onMove,{passive:false});
+  col.addEventListener('touchend',onEnd);
+  col.addEventListener('mousedown',onStart);
+  document.addEventListener('mousemove',onMove);
+  document.addEventListener('mouseup',onEnd);
 }
 function getKeyHolders(){
   const holders=new Set();
@@ -764,21 +794,22 @@ function getRoleRank(name){
 }
 function renderKeyPersonSelector(){
   const el=document.getElementById('keyPersonSelector');if(!el)return;
-  const holders=getKeyHolders();
-  const recent=JSON.parse(localStorage.getItem('keyRecentUse')||'{}');
   const allNames=[...new Set([...personnel,...personnel2,...personnel3].map(p=>p.name))];
-  const holding=allNames.filter(n=>holders.has(n));
-  const rest=allNames.filter(n=>!holders.has(n)).sort((a,b)=>{const rd=getRoleRank(a)-getRoleRank(b);if(rd!==0)return rd;return (recent[b]||0)-(recent[a]||0);});
-  const recommended=rest.slice(0,3);
-  const others=rest.slice(3);
-  function btn(n){
-    const isHolding=holders.has(n);
-    const isSel=selectedKeyPersons.has(n);
-    let cls='kp-person-btn'+(isHolding?' holding':'')+(isSel?' selected':'');
-    return '<button class="'+cls+'" onclick="toggleKeyPerson(\''+n+'\')">'+escapeHtml(n)+'</button>';
-  }
-  function section(label,names){if(!names.length)return'';return'<div class="kp-section-hdr">'+label+'</div>'+names.map(btn).join('');}
-  el.innerHTML=section('현재 보유 중',holding)+section('추천 대상 (인수자)',recommended)+(others.length?section('전체 목록',others):'');
+  el.innerHTML='<div class="person-selector" style="flex-wrap:wrap;gap:6px;margin-top:6px;">'
+    +allNames.map(n=>'<div class="person-chip'+(selectedKeyPersons.has(n)?' selected':'')+'" onclick="toggleKeyPerson(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')
+    +'</div>'
+    +(allNames.length?'':'<span style="font-size:12px;color:#aaa;">설정에서 인원을 추가하세요</span>');
+}
+function renderKeyPersonSelector2(){
+  const el=document.getElementById('keyPersonSelector2');if(!el)return;
+  const allNames=[...new Set([...personnel,...personnel2,...personnel3].map(p=>p.name))];
+  el.innerHTML='<div class="person-selector" style="flex-wrap:wrap;gap:6px;margin-top:6px;">'
+    +allNames.map(n=>'<div class="person-chip'+(selectedKeyReceiver2===n?' selected':'')+'" onclick="selectKeyReceiver2(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')
+    +'</div>';
+}
+function selectKeyReceiver2(name){
+  selectedKeyReceiver2=selectedKeyReceiver2===name?null:name;
+  renderKeyPersonSelector2();
 }
 function toggleKeyPerson(name){
   if(selectedKeyPersons.has(name))selectedKeyPersons.clear();
@@ -1013,7 +1044,18 @@ function toggleModalHvReceiver(name){
 }
 function quickHandover(giverName){
   selectedHvGiver=giverName;
-  createHandover();
+  const content=document.getElementById('inspModalContent');
+  const receiver=[...selectedHvReceiver].join(', ');
+  content.innerHTML=
+    '<div class="insp-modal-title" style="color:#0097a7">인수인계 시간</div>'
+    +'<div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">'+escapeHtml(giverName)+' → '+escapeHtml(receiver)+'</div>'
+    +'<div class="drum-time-row"><span class="drum-time-label">시작</span><div id="hvDrumS" style="flex:1;"></div></div>'
+    +'<div class="drum-time-row"><span class="drum-time-label">종료</span><div id="hvDrumE" style="flex:1;"></div></div>'
+    +'<button class="entry-add-btn" style="background:#0097a7;margin-top:14px;" onclick="saveHandoverWithTime()">저장</button>';
+  makeTimePicker('hvDrumS');makeTimePicker('hvDrumE');
+}
+function saveHandoverWithTime(){
+  createHandover(getTimePicker('hvDrumS'),getTimePicker('hvDrumE'));
   closeInspModal();
 }
 // ── 수기 입력 모달 ──
@@ -1059,11 +1101,12 @@ function openManualForm(cat){
     content.innerHTML='<div class="insp-modal-title" style="color:'+color+'">인수인계 수기 입력</div>'
       +'<div class="card-title">인수자</div><div class="person-selector" id="mHvRcv" style="margin-top:6px;"></div>'
       +'<div class="card-title" style="margin-top:10px;">인계자</div><div class="person-selector" id="mHvGvr" style="margin-top:6px;"></div>'
-      +'<div style="margin-top:10px;"><div class="card-title">처리 시각</div><div id="mHvTp" style="margin-top:6px;"></div></div>'
+      +'<div class="drum-time-row" style="margin-top:10px;"><span class="drum-time-label">시작</span><div id="mHvTp" style="flex:1;"></div></div>'
+      +'<div class="drum-time-row" style="margin-top:6px;"><span class="drum-time-label">종료</span><div id="mHvTpE" style="flex:1;"></div></div>'
       +'<textarea class="note-input" id="mHvNote" rows="2" placeholder="특이사항 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
       +'<button class="entry-add-btn" style="background:'+color+';" onclick="saveModalHandover()">저장</button>';
     renderModalManualHvChips();
-    makeTimePicker('mHvTp');
+    makeTimePicker('mHvTp');makeTimePicker('mHvTpE');
   }
 }
 function toggleModalManualPerson(cat,name,chipEl){
@@ -1093,10 +1136,12 @@ async function saveModalHandover(){
   const receiver=[...selectedHvReceiver].join(', ');
   if(!receiver){toast('인수자를 선택하세요');return;}
   const giver=selectedHvGiver;
-  const timeV=getTimePicker('mHvTp');
+  const startTime=getTimePicker('mHvTp');
+  const endTime=getTimePicker('mHvTpE');
+  const timeV=endTime;
   const noteEl=document.getElementById('mHvNote');
   const note=noteEl?noteEl.value.trim():'';
-  const ev={time:timeV,type:'handover',action:'complete',subject:receiver,handover:giver,note};
+  const ev={time:timeV,type:'handover',action:'complete',subject:receiver,handover:giver,note,start_time:startTime,end_time:endTime};
   events.push(ev);
   if(await saveEvents()){toast((giver?giver+' → ':'')+receiver+' 인수인계 기록');renderTimeline();renderInspectionBoard();}
   else{events.pop();toast('저장 실패.');}
@@ -1115,14 +1160,14 @@ function renderHvGiverChips(){
 }
 function toggleHvReceiver(name){if(selectedHvReceiver.has(name))selectedHvReceiver.delete(name);else selectedHvReceiver.add(name);renderHvReceiverChips();renderInspForm();}
 function toggleHvGiver(name){selectedHvGiver=selectedHvGiver===name?'':name;renderHvGiverChips();if(selectedHvGiver)createHandover();}
-async function createHandover(){
+async function createHandover(startTime,endTime){
   const receiver=[...selectedHvReceiver].join(', ');
   if(!receiver){toast('인수자를 선택하세요');return;}
   const giver=selectedHvGiver;
-  const timeV=nowTime();
+  const timeV=endTime||nowTime();
   const noteEl=document.getElementById('hvNote');
   const note=noteEl?noteEl.value.trim():'';
-  const ev={time:timeV,type:'handover',action:'complete',subject:receiver,handover:giver,note};
+  const ev={time:timeV,type:'handover',action:'complete',subject:receiver,handover:giver,note,start_time:startTime,end_time:endTime};
   events.push(ev);
   if(await saveEvents()){
     toast((giver?giver+' → ':'')+receiver+' 인수인계 기록');
@@ -1279,10 +1324,11 @@ function openTlManualForm(cat){
     content.innerHTML='<div class="insp-modal-title" style="color:'+color+'">인수인계 수기 입력</div>'
       +'<div class="card-title">인수자</div><div class="person-selector" id="mHvRcv" style="margin-top:6px;"></div>'
       +'<div class="card-title" style="margin-top:10px;">인계자</div><div class="person-selector" id="mHvGvr" style="margin-top:6px;"></div>'
-      +'<div style="margin-top:10px;"><div class="card-title">처리 시각</div><div id="mHvTp" style="margin-top:6px;"></div></div>'
+      +'<div class="drum-time-row" style="margin-top:10px;"><span class="drum-time-label">시작</span><div id="mHvTp" style="flex:1;"></div></div>'
+      +'<div class="drum-time-row" style="margin-top:6px;"><span class="drum-time-label">종료</span><div id="mHvTpE" style="flex:1;"></div></div>'
       +'<textarea class="note-input" id="mHvNote" rows="2" placeholder="특이사항 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
       +'<button class="entry-add-btn" style="background:'+color+';" onclick="saveModalHandover()">저장</button>';
-    renderModalManualHvChips();makeTimePicker('mHvTp');
+    renderModalManualHvChips();makeTimePicker('mHvTp');makeTimePicker('mHvTpE');
   }else if(cat==='other'){
     _renderOtherForm(content,color);
   }
@@ -1363,9 +1409,18 @@ function renderHandoverChips(){
     const sel=selectedHandoverPerson===p.name;
     return '<div class="person-chip'+(sel?' selected':'')+'" onclick="toggleHandoverPerson(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>';
   }).join('')||'<span style="font-size:12px;color:#aaa;">설정 > 열쇠 설정 > 인계자 관리에서 추가하세요</span>';
+  const el2=document.getElementById('handoverChips2');if(!el2)return;
+  el2.innerHTML=personnel3.map(p=>{
+    const sel=selectedHandoverPerson2===p.name;
+    return '<div class="person-chip'+(sel?' selected':'')+'" onclick="toggleHandoverPerson2(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>';
+  }).join('')||'<span style="font-size:12px;color:#aaa;">설정 > 열쇠 설정 > 인계자 관리에서 추가하세요</span>';
 }
 function toggleHandoverPerson(name){
   selectedHandoverPerson=selectedHandoverPerson===name?'':name;
+  renderHandoverChips();
+}
+function toggleHandoverPerson2(name){
+  selectedHandoverPerson2=selectedHandoverPerson2===name?'':name;
   renderHandoverChips();
 }
 
@@ -1598,7 +1653,7 @@ async function addKey(action){
     const keys=getGroupKeys(selectedKeyGroup).filter(k=>selectedIssueKeyIds.has(k.id));
     const heldSigs=new Set(getCurrentHeldKeyEntries().map(k=>k.sig));
     for(const key of keys){
-      const ev={time:nowTime(),type:'key',action:'issue',subject:holder,handover:selectedHandoverPerson,location:selectedKeyGroup,key_id:key.id,key_name:key.name,key_number:key.number};
+      const ev={time:nowTime(),type:'key',action:'issue',subject:holder,handover:selectedHandoverPerson,handover2:selectedHandoverPerson2,receiver2:selectedKeyReceiver2,location:selectedKeyGroup,key_id:key.id,key_name:key.name,key_number:key.number};
       if(heldSigs.has(keySigFromEvent(ev))){toast(makeKeyLabel(selectedKeyGroup,key)+' 는 이미 보유 중입니다');continue;}
       events.push(ev);created.push(ev);
     }
@@ -1655,7 +1710,7 @@ function switchEntryTab(tab){
   document.getElementById('keyPanel').style.display=tab==='key'?'':'none';
   document.getElementById('subTabEntry').classList.toggle('active',tab==='entry');
   document.getElementById('subTabKey').classList.toggle('active',tab==='key');
-  if(tab==='key'){renderKeyBoard();renderKeyPersonSelector();renderKeyPresets();renderKeyDetailSelector();renderHeldKeySelector();}
+  if(tab==='key'){renderKeyBoard();renderKeyPersonSelector();renderKeyPersonSelector2();renderKeyPresets();renderKeyDetailSelector();renderHeldKeySelector();}
 }
 function switchCalTab(tab){
   document.getElementById('calPanel').style.display=tab==='cal'?'':'none';
@@ -1942,14 +1997,17 @@ function renderCalendar(){
     const isOff=offDays.has(dateStr);
     const dayScheds=schedules.filter(s=>s.date===dateStr);
 
+    const hasVacation=dayScheds.some(s=>s.type==='휴가');
+    const hasHoliday=dayScheds.some(s=>s.type==='휴무');
     let cellCls='cal-cell';
     if(isToday) cellCls+=' today';
     if(dow===0) cellCls+=' sun';
     if(dow===6) cellCls+=' sat';
     if(isOff) cellCls+=' off-day';
+    if(hasVacation) cellCls+=' vacation';
 
     html+='<div class="'+cellCls+'" onclick="calDateClick(\''+dateStr+'\')">';
-    html+='<span class="cal-date-num">'+d+(isOff?'<span class="cal-off-mark">휴</span>':'')+'</span>';
+    html+='<span class="cal-date-num">'+d+(isOff?'<span class="cal-off-mark">휴</span>':'')+(hasHoliday?'<span class="cal-off-mark" style="color:#e53935;">휴</span>':'')+'</span>';
 
     if(cctv){
       const cctvCls='cal-event cctv'+(cctv.displaced?' displaced':'');
@@ -1964,7 +2022,8 @@ function renderCalendar(){
     }
     if(dayScheds.length){
       dayScheds.slice(0,2).forEach(s=>{
-        html+='<div class="cal-event sched" style="background:'+(s.color||'#34a853')+';opacity:0.92;">'+(s.time?s.time.slice(0,5)+' ':'')+escapeHtml(s.title)+'</div>';
+        const sc=s.type==='휴가'?'#c62828':s.type==='휴무'?'#e53935':(s.color||'#34a853');
+        html+='<div class="cal-event sched" style="background:'+sc+';opacity:0.92;">'+(s.time?s.time.slice(0,5)+' ':'')+escapeHtml(s.title)+'</div>';
       });
       if(dayScheds.length>2) html+='<div class="cal-event sched-more">+'+( dayScheds.length-2)+'</div>';
     }
@@ -2077,7 +2136,13 @@ function openAddScheduleForm(dateStr){
   content.innerHTML=
     '<div class="insp-modal-title">일정 추가</div>'
     +'<div style="font-size:13px;color:var(--accent-green);font-weight:700;margin-bottom:12px;">'+y+'년 '+m+'월 '+d+'일 ('+dow+')</div>'
-    +'<div class="other-field-label">제목</div>'
+    +'<div class="other-field-label">유형</div>'
+    +'<div style="display:flex;gap:6px;margin-top:6px;">'
+    +'<button class="sched-type-btn active" data-type="일반" onclick="selectSchedType(this)">일반</button>'
+    +'<button class="sched-type-btn" data-type="휴무" onclick="selectSchedType(this)">휴무</button>'
+    +'<button class="sched-type-btn" data-type="휴가" onclick="selectSchedType(this)">휴가</button>'
+    +'</div>'
+    +'<div class="other-field-label" style="margin-top:12px;">제목</div>'
     +'<input id="schedTitle" type="text" class="tl-manual-input" placeholder="일정 제목" style="margin-top:4px;">'
     +'<div class="other-field-label" style="margin-top:12px;">시간 <span style="font-weight:400;color:var(--text-secondary);">(선택)</span></div>'
     +'<label class="time-pill-label" style="margin-top:6px;max-width:160px;">'
@@ -2092,6 +2157,10 @@ function openAddScheduleForm(dateStr){
     +'<textarea id="schedNote" class="note-input" rows="2" placeholder="메모" style="margin-top:6px;margin-bottom:12px;"></textarea>'
     +'<button class="entry-add-btn" style="background:#34a853;" onclick="saveSchedule(\''+dateStr+'\')">저장</button>';
 }
+function selectSchedType(el){
+  document.querySelectorAll('.sched-type-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
 function selectSchedColor(el){
   document.querySelectorAll('.sched-color-chip').forEach(c=>c.classList.remove('selected'));
   el.classList.add('selected');
@@ -2103,7 +2172,9 @@ function saveSchedule(dateStr){
   const note=document.getElementById('schedNote').value.trim();
   const colorEl=document.querySelector('.sched-color-chip.selected');
   const color=colorEl?colorEl.dataset.color:'#34a853';
-  schedules.push({id:Date.now(),date:dateStr,title,time,note,color});
+  const typeEl=document.querySelector('.sched-type-btn.active');
+  const type=typeEl?typeEl.dataset.type:'일반';
+  schedules.push({id:Date.now(),date:dateStr,title,time,note,color,type});
   saveSchedules();toast('일정 추가');renderCalendar();calDateClick(dateStr);
 }
 

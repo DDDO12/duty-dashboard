@@ -1974,63 +1974,81 @@ body.theme-light .entry-add-card {
   background: var(--bg-surface);
 }
 
-/* ── Time Spinner ── */
-.tp-wrap {
+/* ── 드럼롤 시간 피커 ── */
+.drum-picker {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  padding: 8px 12px;
-}
-
-.tp-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.tp-val {
-  font-size: 20px;
-  font-weight: 700;
-  padding: 2px 4px;
-  min-width: 44px;
-  text-align: center;
-  color: var(--text-primary);
-  font-family: 'Roboto Mono', monospace;
-}
-
-.tp-btn {
-  background: none;
-  border: none;
-  color: var(--accent-green);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 4px 10px;
-  border-radius: 8px;
-  line-height: 1;
+  height: 132px;
+  position: relative;
+  user-select: none;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
 }
-
-.tp-btn:active {
-  background: rgba(52, 168, 83, 0.12);
+.drum-picker::before,
+.drum-picker::after {
+  content: '';
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  height: 1.5px;
+  background: var(--accent);
+  pointer-events: none;
+  z-index: 3;
 }
-
-.tp-sep {
-  font-size: 20px;
+.drum-picker::before { top: calc(100% / 3); }
+.drum-picker::after  { top: calc(200% / 3); }
+.drum-col {
+  width: 68px;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+  touch-action: none;
+}
+.drum-col:active { cursor: grabbing; }
+.drum-list {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  will-change: transform;
+}
+.drum-item {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text-muted);
+  opacity: 0.3;
+  transition: opacity .15s, font-size .15s, color .15s;
+  font-family: 'Noto Sans KR', monospace;
+}
+.drum-item.sel {
+  opacity: 1;
+  font-size: 28px;
+  color: var(--text-primary);
+}
+.drum-sep {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 0 4px;
+  line-height: 44px;
+  margin-top: -4px;
+}
+.drum-time-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.drum-time-label {
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-muted);
-  padding-bottom: 2px;
-}
-
-.tp-ampm {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-primary);
-  min-width: 36px;
+  width: 26px;
+  flex-shrink: 0;
+  text-align: center;
 }
 
 /* ── Key Detail ── */
@@ -2138,6 +2156,62 @@ body.theme-light .entry-add-card {
   gap: 6px;
   width: 100%;
   flex-wrap: wrap;
+}
+
+/* ── 타임라인 2열 분리 (시간 | 내용) ── */
+.tl-split {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.tl-split-time {
+  width: 78px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.tl-split-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: flex-start;
+  gap: 4px;
+  padding-top: 3px;
+}
+.tl-ts {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--accent-green);
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.tl-te {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+.tl-badge-person {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.tl-badge-manual {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: none;
+  font-size: 10px;
+  padding: 2px 7px;
 }
 
 .tl-time-block {
@@ -2345,6 +2419,30 @@ body.theme-light .entry-add-card {
 /* ── 캘린더 일정 & 휴무일 ── */
 .cal-cell.off-day {
   background: rgba(120,120,120,0.08);
+}
+.cal-cell.vacation {
+  background: rgba(198,40,40,0.13);
+}
+.cal-cell.vacation .cal-date-num {
+  color: #e53935;
+  font-weight: 800;
+}
+/* 일정 유형 선택 버튼 */
+.sched-type-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.sched-type-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
 }
 .cal-off-mark {
   font-size: 8px;
