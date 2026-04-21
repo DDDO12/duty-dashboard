@@ -14,9 +14,8 @@ let selectedHvReceiver=new Set(); // 인수자 (점검탭 인수인계)
 let selectedHvGiver=''; // 인계자 (점검탭 인수인계)
 let inspCategory=null; // 'patrol'|'cctv'|'handover'
 let inspMode='timer';  // 'timer'|'manual'
-let selectedKeyGroup=null;
+let selectedKeyGroups=new Set();
 let selectedIssueKeyIds=new Set();
-let selectedReturnKeyIds=new Set();
 let selectedEntryType=null, selectedEntryAction='입장';
 let selectedEntryPerson1=new Set(), selectedEntryPerson2=new Set();
 const ENTRY_ACTIONS=['입장','퇴장','외출','복귀'];
@@ -53,6 +52,10 @@ function setTheme(mode){
   });
 })();
 
+// ── 디바운스 유틸 ──
+function debounce(fn,ms){let t;return(...args)=>{clearTimeout(t);t=setTimeout(()=>fn(...args),ms);};}
+const _debouncedBoards=debounce(()=>renderAllBoards(),400);
+
 // ── 초기화 ──
 function init(){
   // 스플래시 스크린 제거
@@ -67,7 +70,12 @@ function init(){
   });
   setupNav();setupNavDrag();setupDateSwipe();updateDateLabel();
   loadPersonnel();loadEvents();restoreAllTimers();renderAllBoards();
-  if(!liveRefreshHandle){liveRefreshHandle=setInterval(()=>{renderAllBoards();},1000);}
+  if(!liveRefreshHandle){liveRefreshHandle=setInterval(()=>{_debouncedBoards();},1000);}
+  // 탭 숨김 시 렌더 억제
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){if(liveRefreshHandle){clearInterval(liveRefreshHandle);liveRefreshHandle=null;}}
+    else{if(!liveRefreshHandle){liveRefreshHandle=setInterval(()=>{_debouncedBoards();},1000);}renderAllBoards();}
+  });
 }
 
 // ── 헤더 날짜 스와이프 감지 (header 전체 영역) ──
@@ -93,7 +101,7 @@ function setupDateSwipe(){
 function setupNav(){
   const pageRender={
     'timeline': ()=>{renderTimeline();},
-    'entry-keys': ()=>{renderEntryBoard();renderEntryForm();renderKeyBoard();renderKeyPersonSelector();renderKeyPersonSelector2();renderKeyPresets();renderKeyDetailSelector();renderHeldKeySelector();},
+    'entry-keys': ()=>{renderEntryBoard();renderEntryForm();renderKeyBoard();renderKeyPersonSelector();renderKeyPersonSelector2();renderKeyPresets();renderKeyDetailSelector();},
     'inspection':()=>{renderInspectionBoard();renderInspForm();},
     'overtime-cal': ()=>{renderOTBoard();renderOTSummary();renderCalendar();},
     'settings': ()=>{renderSettings();renderKeyCatalogEditor();}
@@ -147,7 +155,7 @@ function updateDateLabel(){
   const day=d.getDate();
   const label=document.getElementById('dateLabel');
   label.textContent=m+'월 '+day+'일 ('+wd+')';
-  label.className='current-date'+(datesWithData.has(viewDate)?' has-data':'');
+  label.className='current-date header-date-pill'+(datesWithData.has(viewDate)?' has-data':'');
 }
 function prevDay(){viewDate=dateShift(viewDate,-1);updateDateLabel();loadEvents();}
 function nextDay(){viewDate=dateShift(viewDate,+1);updateDateLabel();loadEvents();}
@@ -182,7 +190,7 @@ function loadPersonnel(){
   ensureKeyCatalog();
   renderPersonButtons();renderKeyPresets();renderSettings();renderEntryForm();
   renderPersonChips('patrol');renderPersonChips('cctv');renderPersonChips('ot');
-  renderKeyDetailSelector();renderHeldKeySelector();renderOTSummary();
+  renderKeyDetailSelector();renderOTSummary();
 }
 function saveEvents(){
   try{
@@ -226,7 +234,7 @@ function ensureKeyCatalog(){
     item.keys=item.keys.map((k,i)=>({id:k.id||('g'+idx+'_k'+(i+1)),name:k.name||group,number:k.number||((i+1)+'번')}));
   });
   keyCatalog=keyCatalog.filter(g=>keyPresets.includes(g.group));
-  if(selectedKeyGroup && !keyPresets.includes(selectedKeyGroup)) selectedKeyGroup=null;
+  selectedKeyGroups.forEach(g=>{if(!keyPresets.includes(g))selectedKeyGroups.delete(g);});
 }
 function getGroupKeys(group){
   ensureKeyCatalog();
@@ -337,7 +345,12 @@ function renderTimeline(){
   else{empty.style.display='none';}
 
   const lb={entry:'출입',patrol:'순찰',cctv:'CCTV',key:'열쇠',handover:'인수인계',other:'특이'};
-  const counts={};timelineEvents.forEach(e=>{counts[e.type]=(counts[e.type]||0)+1;});
+  // batch_id 묶음은 1건으로 카운트
+  const counts={};const countedBatch=new Set();
+  timelineEvents.forEach(e=>{
+    if(e.batch_id){if(countedBatch.has(e.batch_id))return;countedBatch.add(e.batch_id);}
+    counts[e.type]=(counts[e.type]||0)+1;
+  });
   stats.innerHTML=Object.entries(counts).map(([k,v])=>'<span class="stat-badge">'+(lb[k]||k)+' '+v+'건</span>').join('');
 
   const LOC_PALETTE=['#4285f4','#e8710a','#34a853','#9334e6','#00838f','#c2185b','#fbbc04','#0097a7'];
@@ -367,19 +380,19 @@ function renderTimeline(){
     +'</div>').join('');
   }
   if(activeIds.length){
-    html+='<div style="font-size:11px;font-weight:700;color:#e65100;padding:4px 0 6px;letter-spacing:0.5px;">진행 중 '+activeIds.length+'</div>';
+    html+='<div class="tl-section-label">진행 중 '+activeIds.length+'</div>';
     html+=activeIds.map(([id,t])=>{
       const color=colors[t.category]||'#888';
       const label=tlLabels[t.category]||t.category;
       return '<div class="timeline-item timeline-running" style="border-left:3px solid '+color+';padding-left:8px;opacity:0.9;">'
         +'<div class="tl-head"><div class="tl-time-block"><div class="tl-time-range"><span class="tl-time-start">'+escapeHtml(t.startClock||'--:--')+'</span><span class="tl-time-sep">~</span><span class="tl-time-end live">현재</span></div><div class="tl-duration">'+fmtTime(getBoardElapsed(parseInt(id)))+'</div></div><span class="timeline-tag tag-'+t.category+'">'+label+'</span></div>'
-        +'<div class="tl-badges"><span class="tl-badge tl-badge-action-in">진행중</span><span class="tl-badge" style="background:#f1f3f4;color:#555;">'+escapeHtml(t.type||'')+'</span>'
-        +(t.persons?'<span class="tl-badge" style="background:#f1f3f4;color:#555;">'+escapeHtml(t.persons)+'</span>':'')
+        +'<div class="tl-badges"><span class="tl-badge tl-badge-action-in">진행중</span><span class="tl-badge tl-badge-running">'+escapeHtml(t.type||'')+'</span>'
+        +(t.persons?'<span class="tl-badge tl-badge-running">'+escapeHtml(t.persons)+'</span>':'')
         +'</div>'
         +'</div>';
     }).join('');
-    html+='<div style="border-top:2px dashed #f0f0f0;margin:8px 0 6px;"></div>';
-    html+='<div style="font-size:11px;font-weight:700;color:#888;padding:0 0 6px;letter-spacing:0.5px;">완료 기록</div>';
+    html+='<div class="tl-divider"></div>';
+    html+='<div class="tl-section-label tl-section-done">완료 기록</div>';
   }
 
   const SKIP_ACTIONS=new Set(['start','입장']);
@@ -390,9 +403,11 @@ function renderTimeline(){
     if(ev.type==='key'&&ev.batch_id){
       if(seenBatch.has(ev.batch_id))return; // 이미 대표로 추가됨
       seenBatch.add(ev.batch_id);
-      // 같은 batch_id 키들 수집
+      // 같은 batch_id 키들 수집 → 서브그룹별 요약
       const batchKeys=timelineEvents.filter(e=>e.type==='key'&&e.batch_id===ev.batch_id);
-      const keyNames=batchKeys.map(e=>[e.key_name,e.key_number].filter(Boolean).join(' ')).join(' · ');
+      const subC={};
+      batchKeys.forEach(e=>{const n=e.key_name||e.location;subC[n]=(subC[n]||0)+1;});
+      const keyNames=Object.entries(subC).map(([n,c])=>n+' '+c+'개').join(', ');
       mergedEvents.push({ev:{...ev,_keyNames:keyNames,_keyCount:batchKeys.length},idx});
     }else{
       mergedEvents.push({ev,idx});
@@ -478,8 +493,10 @@ function renderTimeline(){
 function renderEntryForm(){
   document.getElementById('entryTypes').innerHTML=entryTypes.map(t=>'<div class="type-chip'+(selectedEntryType===t?' selected':'')+'" onclick="toggleEntryType(\''+t+'\')">'+t+'</div>').join('');
   document.getElementById('entryActionChips').innerHTML=ENTRY_ACTIONS.map(a=>'<div class="type-chip'+(selectedEntryAction===a?' selected':'')+'" onclick="selectEntryAction(\''+a+'\')">'+a+'</div>').join('');
-  document.getElementById('entryPersonChips1').innerHTML=personnel.map(p=>'<div class="person-chip'+(selectedEntryPerson1.has(p.name)?' selected':'')+'" onclick="selectEntryPerson(1,\''+p.name+'\')">'+p.name+'</div>').join('');
-  document.getElementById('entryPersonChips2').innerHTML=personnel2.map(p=>'<div class="person-chip'+(selectedEntryPerson2.has(p.name)?' selected':'')+'" onclick="selectEntryPerson(2,\''+p.name+'\')">'+p.name+'</div>').join('');
+  const gsE1=personGridStyle(personnel.length);
+  document.getElementById('entryPersonChips1').innerHTML='<div class="pchip-grid" style="'+gsE1+'">'+personnel.map(p=>'<div class="person-chip'+(selectedEntryPerson1.has(p.name)?' selected':'')+'" onclick="selectEntryPerson(1,\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('')+'</div>';
+  const gsE2=personGridStyle(personnel2.length);
+  document.getElementById('entryPersonChips2').innerHTML='<div class="pchip-grid" style="'+gsE2+'">'+personnel2.map(p=>'<div class="person-chip'+(selectedEntryPerson2.has(p.name)?' selected':'')+'" onclick="selectEntryPerson(2,\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('')+'</div>';
 }
 function toggleEntryType(t){selectedEntryType=selectedEntryType===t?null:t;renderEntryForm();}
 function selectEntryAction(a){selectedEntryAction=a;renderEntryForm();}
@@ -568,7 +585,8 @@ function renderPersonChipsQuickStart(ctx){
   const map={patrol:'patrolPersonChips',cctv:'cctvPersonChips'};
   const el=document.getElementById(map[ctx]);if(!el)return;
   const color=ctx==='patrol'?'#34a853':'#9334e6';
-  el.innerHTML=personnel.map(p=>'<div class="person-chip" style="cursor:pointer;" onclick="quickStartInsp(\''+ctx+'\',\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('')||'<span style="font-size:12px;color:#aaa;">설정에서 대상자를 추가하세요</span>';
+  const gs1=personGridStyle(personnel.length);
+  el.innerHTML=personnel.length?'<div class="pchip-grid" style="'+gs1+'">'+personnel.map(p=>'<div class="person-chip" onclick="quickStartInsp(\''+ctx+'\',\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('')+'</div>':'<span style="font-size:12px;color:#aaa;">설정에서 대상자를 추가하세요</span>';
 }
 function quickStartInsp(ctx,name){
   if(ctx==='patrol'){
@@ -604,11 +622,11 @@ function renderBoard(category, boardId, typeColor){
     const editBtn='<button class="btn-icon btn-edit" onclick="editBoard('+id+')"><span class="material-icons-round">edit</span></button>';
     const delBtn='<button class="btn-icon btn-del" onclick="deleteBoardTimer('+id+')"><span class="material-icons-round">delete</span></button>';
     if(t.done){
-      return '<div class="entry-row done">'+editBtn+'<div class="entry-info"><span class="entry-type" style="background:'+tc+'">'+t.type+'</span><span class="entry-persons">'+escapeHtml(t.persons)+'</span></div><span class="entry-timer">'+time+'</span>'+(t.note?'<span class="note-preview" title="'+escapeHtml(t.note)+'">'+escapeHtml(t.note)+'</span>':'')+delBtn+'</div>';
+      return '<div class="entry-row done">'+editBtn+'<div class="entry-info"><span class="entry-type" style="background:'+tc+'">'+escapeHtml(t.type)+'</span><span class="entry-persons">'+escapeHtml(t.persons)+'</span></div><span class="entry-timer">'+time+'</span>'+(t.note?'<span class="note-preview" title="'+escapeHtml(t.note)+'">'+escapeHtml(t.note)+'</span>':'')+delBtn+'</div>';
     }
     const running=!t.paused;
     const noteBtn=category==='cctv'?'<button class="btn-icon btn-memo" onclick="openMemo('+id+')"><span class="material-icons-round">edit_note</span></button>':'';
-    return '<div class="entry-row">'+editBtn+'<div class="entry-info"><span class="entry-type" style="background:'+tc+'">'+t.type+'</span><span class="entry-persons">'+escapeHtml(t.persons)+'</span></div><span class="entry-timer'+(running?' running':'')+'">'+time+'</span><div class="entry-actions">'
+    return '<div class="entry-row">'+editBtn+'<div class="entry-info"><span class="entry-type" style="background:'+tc+'">'+escapeHtml(t.type)+'</span><span class="entry-persons">'+escapeHtml(t.persons)+'</span></div><span class="entry-timer'+(running?' running':'')+'">'+time+'</span><div class="entry-actions">'
       +noteBtn
       +(running?'<button class="btn-pause" onclick="pauseBoard('+id+')"><span class="material-icons-round">pause</span></button>'
                :'<button class="btn-play" onclick="resumeBoard('+id+')"><span class="material-icons-round">play_arrow</span></button>')
@@ -651,7 +669,7 @@ function renderInspectionBoard(){
     const editBtn='<button class="btn-icon btn-edit" onclick="editBoard('+id+')"><span class="material-icons-round">edit</span></button>';
     const delBtn='<button class="btn-icon btn-del" onclick="deleteBoardTimer('+id+')"><span class="material-icons-round">delete</span></button>';
     if(t.done){
-      return '<div class="entry-row done">'+editBtn+'<div class="entry-info"><span class="entry-type" style="background:'+tc+'">'+t.type+'</span><span class="entry-persons">'+t.persons+'</span></div><span class="entry-timer">'+time+'</span>'+(t.note?'<span class="note-preview" title="'+escapeHtml(t.note)+'">'+escapeHtml(t.note)+'</span>':'')+delBtn+'</div>';
+      return '<div class="entry-row done">'+editBtn+'<div class="entry-info"><span class="entry-type" style="background:'+tc+'">'+escapeHtml(t.type)+'</span><span class="entry-persons">'+escapeHtml(t.persons)+'</span></div><span class="entry-timer">'+time+'</span>'+(t.note?'<span class="note-preview" title="'+escapeHtml(t.note)+'">'+escapeHtml(t.note)+'</span>':'')+delBtn+'</div>';
     }
     const running=!t.paused;
     const noteBtn=t.category==='cctv'?'<button class="btn-icon btn-memo" onclick="openMemo('+id+')"><span class="material-icons-round">edit_note</span></button>':'';
@@ -659,7 +677,7 @@ function renderInspectionBoard(){
       +'<textarea id="memo-ta-'+id+'" rows="3" style="width:100%;border:1px solid #c084fc;border-radius:8px;padding:8px;font-size:14px;box-sizing:border-box;resize:vertical;">'+escapeHtml(t.note||'')+'</textarea>'
       +'<button onclick="saveMemo('+id+')" style="margin-top:6px;width:100%;background:#9334e6;color:#fff;border:none;border-radius:8px;padding:8px;font-size:14px;cursor:pointer;">저장</button>'
       +'</div>':'';
-    return '<div class="entry-row" style="flex-wrap:wrap;">'+editBtn+'<div class="entry-info"><span class="entry-type" style="background:'+tc+'">'+t.type+'</span><span class="entry-persons">'+t.persons+'</span></div><span class="entry-timer'+(running?' running':'')+'">'+time+'</span><div class="entry-actions">'+noteBtn+(running?'<button class="btn-pause" onclick="pauseBoard('+id+')"><span class="material-icons-round">pause</span></button>':'<button class="btn-play" onclick="resumeBoard('+id+')"><span class="material-icons-round">play_arrow</span></button>')+'<button class="btn-stop-entry" onclick="stopBoard('+id+')"><span class="material-icons-round">stop</span></button>'+delBtn+'</div>'+memoSlide+'</div>';
+    return '<div class="entry-row" style="flex-wrap:wrap;">'+editBtn+'<div class="entry-info"><span class="entry-type" style="background:'+tc+'">'+escapeHtml(t.type)+'</span><span class="entry-persons">'+escapeHtml(t.persons)+'</span></div><span class="entry-timer'+(running?' running':'')+'">'+time+'</span><div class="entry-actions">'+noteBtn+(running?'<button class="btn-pause" onclick="pauseBoard('+id+')"><span class="material-icons-round">pause</span></button>':'<button class="btn-play" onclick="resumeBoard('+id+')"><span class="material-icons-round">play_arrow</span></button>')+'<button class="btn-stop-entry" onclick="stopBoard('+id+')"><span class="material-icons-round">stop</span></button>'+delBtn+'</div>'+memoSlide+'</div>';
   };
   let html='';
   if(openIds.length){html+=sectionHdr('진행 중',openIds.length);html+=openIds.map(renderRow).join('');}
@@ -681,7 +699,7 @@ function renderInspectionBoard(){
 async function deleteHandoverEvent(idx){
   if(!confirm('삭제할까요?'))return;
   const bk=[...events];events.splice(idx,1);
-  if(await saveEvents()){toast('삭제');renderTimeline();renderInspectionBoard();}
+  if(await saveEvents()){syncBoardTimersAfterDelete();toast('삭제');renderTimeline();renderInspectionBoard();}
   else{events=bk;toast('저장 실패.');}
 }
 function renderAllBoards(){renderEntryBoard();renderInspectionBoard();renderOTBoard();renderOTSummary();renderActiveBlock();}
@@ -694,7 +712,7 @@ function getBoardElapsed(id){
 }
 function createBoardTimer(category, type, persons, note){
   const id=++timerIdCounter;
-  boardTimers[id]={startTime:Date.now(),startClock:nowTime(),paused:false,elapsed:0,category,type,persons,done:false,note:note||''};
+  boardTimers[id]={startTime:Date.now(),startClock:nowTime(),paused:false,elapsed:0,category,type,persons,done:false,note:note||'',date:viewDate};
   saveBoardState();
   return id;
 }
@@ -740,7 +758,7 @@ function saveMemo(id){
 function saveBoardState(){
   try{
     const s={};Object.entries(boardTimers).forEach(([id,t])=>{
-      s[id]={category:t.category,type:t.type,persons:t.persons,elapsed:t.paused||t.done?t.elapsed:t.elapsed+(Date.now()-t.startTime),paused:t.paused,done:t.done,note:t.note||'',startClock:t.startClock||'',endAt:t.endAt||0};
+      s[id]={category:t.category,type:t.type,persons:t.persons,elapsed:t.paused||t.done?t.elapsed:t.elapsed+(Date.now()-t.startTime),paused:t.paused,done:t.done,note:t.note||'',startClock:t.startClock||'',endAt:t.endAt||0,date:t.date||viewDate};
     });
     localStorage.setItem('boardTimers',JSON.stringify(s));
   }catch(e){}
@@ -748,12 +766,17 @@ function saveBoardState(){
 function restoreAllTimers(){
   try{
     const s=JSON.parse(localStorage.getItem('boardTimers')||'{}');
+    const today=todayLocal();
     let purged=false;
     Object.entries(s).forEach(([id,t])=>{
       // FIXED_V2: category='overtime' entries are legacy (old timer-based OT). Drop them.
       if(t.category==='overtime'){purged=true;return;}
+      // 날짜 필드가 다른 날이면 오래된 타이머 → 제거
+      // 날짜 필드가 없는 레거시 타이머가 완료 상태이면 제거 (이전 날 잔존 방지)
+      if(t.date && t.date!==today){purged=true;return;}
+      if(!t.date && t.done){purged=true;return;}
       const nid=parseInt(id);if(nid>=timerIdCounter)timerIdCounter=nid;
-      boardTimers[nid]={...t,startTime:Date.now(),startClock:t.startClock||nowTime()};
+      boardTimers[nid]={...t,date:t.date||today,startTime:Date.now(),startClock:t.startClock||nowTime()};
     });
     if(purged)saveBoardState();
   }catch(e){}
@@ -876,12 +899,10 @@ function renderKeyPersonSelector(){
   // 하키(2)에서 선택된 인원 제외
   const exclude=selectedKeyReceiver2?new Set([selectedKeyReceiver2]):null;
   const avail=allNames.filter(n=>!exclude||!exclude.has(n));
-  const cols=avail.length<=4?2:avail.length<=9?3:4;
-  const selName=[...selectedKeyPersons][0];
-  el.innerHTML='<div class="pchip-grid" style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:8px;margin-top:6px;">'
+  const gs=personGridStyle(avail.length);
+  el.innerHTML='<div class="pchip-grid" style="'+gs+'">'
     +avail.map(n=>'<div class="person-chip'+(selectedKeyPersons.has(n)?' selected':'')+'" onclick="toggleKeyPerson(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')
     +'</div>';
-  if(selName){const g=el.querySelector('.pchip-grid');if(g)_chipGridSelect(g,selName,()=>renderKeyPersonSelector());}
 }
 function renderKeyPersonSelector2(){
   const el=document.getElementById('keyPersonSelector2');if(!el)return;
@@ -890,45 +911,37 @@ function renderKeyPersonSelector2(){
   // 상키(1)에서 선택된 인원 제외
   const excl=[...selectedKeyPersons];
   const avail=allNames.filter(n=>!excl.includes(n));
-  const cols=avail.length<=4?2:avail.length<=9?3:4;
-  el.innerHTML='<div class="pchip-grid" style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:8px;margin-top:6px;">'
+  const gs2=personGridStyle(avail.length);
+  el.innerHTML='<div class="pchip-grid" style="'+gs2+'">'
     +avail.map(n=>'<div class="person-chip'+(selectedKeyReceiver2===n?' selected':'')+'" onclick="selectKeyReceiver2(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')
     +'</div>';
-  if(selectedKeyReceiver2){const g=el.querySelector('.pchip-grid');if(g)_chipGridSelect(g,selectedKeyReceiver2,()=>renderKeyPersonSelector2());}
 }
 function selectKeyReceiver2(name){
   selectedKeyReceiver2=selectedKeyReceiver2===name?null:name;
+  if(selectedKeyReceiver2)collapseKeyRole('keyPersonSelector2');
   renderKeyPersonSelector2();
-  // 상키에서도 해당 인원 재렌더 (제외 반영)
   renderKeyPersonSelector();
+  updateKeyRoleLabels();
 }
 function toggleKeyPerson(name){
   if(selectedKeyPersons.has(name))selectedKeyPersons.clear();
   else{selectedKeyPersons.clear();selectedKeyPersons.add(name);}
-  selectedReturnKeyIds.clear();
+  if(selectedKeyPersons.size)collapseKeyRole('keyPersonSelector');
   renderKeyPersonSelector();
-  renderKeyPersonSelector2(); // 하키에서 해당 인원 제외
-  renderHeldKeySelector();
+  renderKeyPersonSelector2();
   updateKeyBtns();
+  updateKeyRoleLabels();
 }
 function updateKeyBtns(){
   const holder=getSelectedKeyHolder();
   const bi=document.getElementById('btnKeyIssue');
-  const br=document.getElementById('btnKeyReturn');
   const canIssue=!!holder&&selectedIssueKeyIds.size>0;
-  const canReturn=!!holder&&selectedReturnKeyIds.size>0;
   if(bi){bi.disabled=!canIssue;bi.style.opacity=canIssue?'1':'0.4';bi.style.cursor=canIssue?'pointer':'not-allowed';}
-  if(br){br.disabled=!canReturn;br.style.opacity=canReturn?'1':'0.4';br.style.cursor=canReturn?'pointer':'not-allowed';}
   const summary=document.getElementById('keySelectionSummary');
   if(summary){
-    const group=selectedKeyGroup||'';
-    const selected=getGroupKeys(group).filter(k=>selectedIssueKeyIds.has(k.id)).map(k=>makeKeyLabel(group,k));
+    const selected=[];
+    selectedKeyGroups.forEach(g=>{getGroupKeys(g).filter(k=>selectedIssueKeyIds.has(k.id)).forEach(k=>selected.push(makeKeyLabel(g,k)));});
     summary.innerHTML=selected.length?('<div class="key-summary-title">선택된 수령 키</div>'+selected.map(v=>'<span class="key-summary-chip">'+escapeHtml(v)+'</span>').join('')):'<div class="key-summary-empty">선택된 수령 키 없음</div>';
-  }
-  const rsummary=document.getElementById('keyReturnSummary');
-  if(rsummary){
-    const held=getHolderHeldKeys(holder).filter(k=>selectedReturnKeyIds.has(k.sig));
-    rsummary.innerHTML=held.length?('<div class="key-summary-title">선택된 반납 키</div>'+held.map(k=>'<span class="key-summary-chip">'+escapeHtml([k.group,k.key_name,k.key_number].filter(Boolean).join(' / '))+'</span>').join('')):'<div class="key-summary-empty">선택된 반납 키 없음</div>';
   }
 }
 // ── 점검 통합 폼 ──
@@ -979,7 +992,8 @@ function openInspModal(cat){
       +'<div class="person-selector" id="inspModalChips"></div>';
     modal.classList.add('open');
     const el=document.getElementById('inspModalChips');
-    el.innerHTML=personnel.map(p=>'<div class="person-chip" onclick="quickStartFromModal(\''+cat+'\',\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('')||'<span style="font-size:12px;color:#aaa;">설정에서 대상자를 추가하세요</span>';
+    const gsM=personGridStyle(personnel.length);
+    el.innerHTML=personnel.length?'<div class="pchip-grid" style="'+gsM+'">'+personnel.map(p=>'<div class="person-chip" onclick="quickStartFromModal(\''+cat+'\',\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('')+'</div>':'<span style="font-size:12px;color:#aaa;">설정에서 대상자를 추가하세요</span>';
   }else{
     selectedHvReceiver.clear();selectedHvGiver='';
     content.innerHTML='<div class="insp-modal-title" style="color:'+info.color+'">인수자 선택 <span style="font-weight:400;color:#999;font-size:11px;">(받는 사람)</span></div>'
@@ -1118,7 +1132,8 @@ function closeStopwatch(){
 function renderModalHvReceiverChips(){
   const el=document.getElementById('inspModalChips');if(!el)return;
   const all=[...new Set([...personnel,...personnel2].map(p=>p.name))];
-  el.innerHTML=all.map(n=>'<div class="person-chip'+(selectedHvReceiver.has(n)?' selected':'')+'" onclick="toggleModalHvReceiver(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')||'<span style="font-size:12px;color:#aaa;">설정에서 대상자를 추가하세요</span>';
+  const gsR=personGridStyle(all.length);
+  el.innerHTML=all.length?'<div class="pchip-grid" style="'+gsR+'">'+all.map(n=>'<div class="person-chip'+(selectedHvReceiver.has(n)?' selected':'')+'" onclick="toggleModalHvReceiver(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')+'</div>':'<span style="font-size:12px;color:#aaa;">설정에서 대상자를 추가하세요</span>';
 }
 function toggleModalHvReceiver(name){
   if(selectedHvReceiver.has(name))selectedHvReceiver.delete(name);else selectedHvReceiver.add(name);
@@ -1131,7 +1146,8 @@ function toggleModalHvReceiver(name){
       +'<div class="insp-modal-title">인계자 선택 <span style="font-weight:400;color:#999;font-size:11px;">(넘기는 사람)</span></div>'
       +'<div class="person-selector" id="inspModalChips2"></div>';
     const el2=document.getElementById('inspModalChips2');
-    el2.innerHTML=personnel3.map(p=>'<div class="person-chip" onclick="quickHandover(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('')||'<span style="font-size:12px;color:#aaa;">설정 > 인계자 관리에서 추가하세요</span>';
+    const gsG=personGridStyle(personnel3.length);
+    el2.innerHTML=personnel3.length?'<div class="pchip-grid" style="'+gsG+'">'+personnel3.map(p=>'<div class="person-chip" onclick="quickHandover(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('')+'</div>':'<span style="font-size:12px;color:#aaa;">설정 > 인계자 관리에서 추가하세요</span>';
   }
 }
 function quickHandover(giverName){
@@ -1183,7 +1199,8 @@ function openManualForm(cat){
     const el=document.getElementById(chipsId);
     const selSet=cat==='patrol'?selectedPatrolPersons:selectedCctvPersons;
     selSet.clear();
-    el.innerHTML=personnel.map(p=>'<div class="person-chip" onclick="toggleModalManualPerson(\''+cat+'\',\''+escapeHtml(p.name)+'\',this)">'+escapeHtml(p.name)+'</div>').join('');
+    const gsMM=personGridStyle(personnel.length);
+    el.innerHTML='<div class="pchip-grid" style="'+gsMM+'">'+personnel.map(p=>'<div class="person-chip" onclick="toggleModalManualPerson(\''+cat+'\',\''+escapeHtml(p.name)+'\',this)">'+escapeHtml(p.name)+'</div>').join('')+'</div>';
     makeTimePicker(sid);makeTimePicker(eid);
   }else if(cat==='other'){
     _renderOtherForm(content,color);
@@ -1216,10 +1233,12 @@ function renderModalManualHvChips(){
   const gvr=document.getElementById('mHvGvr');
   if(rcv){
     const all=[...new Set([...personnel,...personnel2].map(p=>p.name))];
-    rcv.innerHTML=all.map(n=>'<div class="person-chip'+(selectedHvReceiver.has(n)?' selected':'')+'" onclick="toggleModalManualHvR(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('');
+    const gsRcv=personGridStyle(all.length);
+    rcv.innerHTML='<div class="pchip-grid" style="'+gsRcv+'">'+all.map(n=>'<div class="person-chip'+(selectedHvReceiver.has(n)?' selected':'')+'" onclick="toggleModalManualHvR(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')+'</div>';
   }
   if(gvr){
-    gvr.innerHTML=personnel3.map(p=>'<div class="person-chip'+(selectedHvGiver===p.name?' selected':'')+'" onclick="toggleModalManualHvG(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('');
+    const gsGvr=personGridStyle(personnel3.length);
+    gvr.innerHTML='<div class="pchip-grid" style="'+gsGvr+'">'+personnel3.map(p=>'<div class="person-chip'+(selectedHvGiver===p.name?' selected':'')+'" onclick="toggleModalManualHvG(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('')+'</div>';
   }
 }
 function toggleModalManualHvR(n){if(selectedHvReceiver.has(n))selectedHvReceiver.delete(n);else selectedHvReceiver.add(n);renderModalManualHvChips();}
@@ -1244,11 +1263,13 @@ async function saveModalHandover(){
 function renderHvReceiverChips(){
   const el=document.getElementById('hvReceiverChips');if(!el)return;
   const all=[...new Set([...personnel,...personnel2].map(p=>p.name))];
-  el.innerHTML=all.map(n=>'<div class="person-chip'+(selectedHvReceiver.has(n)?' selected':'')+'" onclick="toggleHvReceiver(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')||'<span style="font-size:12px;color:#aaa;">설정에서 대상자를 추가하세요</span>';
+  const gsHvR=personGridStyle(all.length);
+  el.innerHTML=all.length?'<div class="pchip-grid" style="'+gsHvR+'">'+all.map(n=>'<div class="person-chip'+(selectedHvReceiver.has(n)?' selected':'')+'" onclick="toggleHvReceiver(\''+escapeHtml(n)+'\')">'+escapeHtml(n)+'</div>').join('')+'</div>':'<span style="font-size:12px;color:#aaa;">설정에서 대상자를 추가하세요</span>';
 }
 function renderHvGiverChips(){
   const el=document.getElementById('hvGiverChips');if(!el)return;
-  el.innerHTML=personnel3.map(p=>'<div class="person-chip'+(selectedHvGiver===p.name?' selected':'')+'" onclick="toggleHvGiver(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('')||'<span style="font-size:12px;color:#aaa;">설정 > 인계자 관리에서 추가하세요</span>';
+  const gsHvG=personGridStyle(personnel3.length);
+  el.innerHTML=personnel3.length?'<div class="pchip-grid" style="'+gsHvG+'">'+personnel3.map(p=>'<div class="person-chip'+(selectedHvGiver===p.name?' selected':'')+'" onclick="toggleHvGiver(\''+escapeHtml(p.name)+'\')">'+escapeHtml(p.name)+'</div>').join('')+'</div>':'<span style="font-size:12px;color:#aaa;">설정 > 인계자 관리에서 추가하세요</span>';
 }
 function toggleHvReceiver(name){if(selectedHvReceiver.has(name))selectedHvReceiver.delete(name);else selectedHvReceiver.add(name);renderHvReceiverChips();renderInspForm();}
 function toggleHvGiver(name){selectedHvGiver=selectedHvGiver===name?'':name;renderHvGiverChips();if(selectedHvGiver)createHandover();}
@@ -1318,7 +1339,7 @@ function _renderOtherForm(content,color){
     // 누가
     +'<div class="other-field-label" style="margin-top:12px;">누가</div>'
     +'<div class="person-selector" id="mOtherChips" style="margin-top:6px;">'
-      +allPersons.map(n=>'<div class="person-chip" onclick="this.classList.toggle(\'selected\')">'+escapeHtml(n)+'</div>').join('')
+      +'<div class="pchip-grid" style="'+personGridStyle(allPersons.length)+'">'+allPersons.map(n=>'<div class="person-chip" onclick="this.classList.toggle(\'selected\')">'+escapeHtml(n)+'</div>').join('')+'</div>'
     +'</div>'
     // 무엇을/어떻게
     +'<div class="other-field-label" style="margin-top:12px;">무엇을 / 어떻게</div>'
@@ -1384,7 +1405,8 @@ function openTlManualForm(cat){
       +_tlmTimeRangeHtml('tlmEntryStartTp','tlmEntryEndTp')
       +'<textarea id="tlmEntryNote" class="note-input" rows="2" placeholder="메모 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
       +'<button class="entry-add-btn" style="background:'+color+';" onclick="saveTlManualEntry()">저장</button>';
-    document.getElementById('tlmEntryChips').innerHTML=allPersons.map(n=>'<div class="person-chip" onclick="this.classList.toggle(\'selected\')">'+escapeHtml(n)+'</div>').join('');
+    const gsTlE=personGridStyle(allPersons.length);
+    document.getElementById('tlmEntryChips').innerHTML='<div class="pchip-grid" style="'+gsTlE+'">'+allPersons.map(n=>'<div class="person-chip" onclick="this.classList.toggle(\'selected\')">'+escapeHtml(n)+'</div>').join('')+'</div>';
     makeTimePicker('tlmEntryStartTp');makeTimePicker('tlmEntryEndTp');
   }else if(cat==='key'){
     content.innerHTML='<div class="insp-modal-title" style="color:'+color+'">열쇠 수기 입력</div>'
@@ -1397,7 +1419,8 @@ function openTlManualForm(cat){
       +'<div class="card-title" style="margin-top:10px;">시각</div><div id="tlmKeyTp" style="margin-top:4px;"></div>'
       +'<textarea id="tlmKeyNote" class="note-input" rows="2" placeholder="메모 (선택)" style="margin-top:10px;margin-bottom:12px;"></textarea>'
       +'<button class="entry-add-btn" style="background:'+color+';" onclick="saveTlManualKey()">저장</button>';
-    document.getElementById('tlmKeyChips').innerHTML=allPersons.map(n=>'<div class="person-chip" onclick="tlmKeySelectOne(this)">'+escapeHtml(n)+'</div>').join('');
+    const gsTlK=personGridStyle(allPersons.length);
+    document.getElementById('tlmKeyChips').innerHTML='<div class="pchip-grid" style="'+gsTlK+'">'+allPersons.map(n=>'<div class="person-chip" onclick="tlmKeySelectOne(this)">'+escapeHtml(n)+'</div>').join('')+'</div>';
     makeTimePicker('tlmKeyTp');
   }else if(cat==='patrol'||cat==='cctv'){
     const id=cat==='patrol'?'Patrol':'Cctv';
@@ -1409,7 +1432,8 @@ function openTlManualForm(cat){
       +'<button class="entry-add-btn" style="background:'+color+';" onclick="saveTlManualInsp(\''+cat+'\')">저장</button>';
     const selSet=cat==='patrol'?selectedPatrolPersons:selectedCctvPersons;
     selSet.clear();
-    document.getElementById('tlmInspChips').innerHTML=personnel.map(p=>'<div class="person-chip" onclick="toggleTlInspPerson(\''+cat+'\',\''+escapeHtml(p.name)+'\',this)">'+escapeHtml(p.name)+'</div>').join('');
+    const gsTlI=personGridStyle(personnel.length);
+    document.getElementById('tlmInspChips').innerHTML='<div class="pchip-grid" style="'+gsTlI+'">'+personnel.map(p=>'<div class="person-chip" onclick="toggleTlInspPerson(\''+cat+'\',\''+escapeHtml(p.name)+'\',this)">'+escapeHtml(p.name)+'</div>').join('')+'</div>';
     makeTimePicker('m'+id+'StartTp');makeTimePicker('m'+id+'EndTp');
   }else if(cat==='handover'){
     selectedHvReceiver.clear();selectedHvGiver='';
@@ -1497,16 +1521,14 @@ async function saveManualKey(){
 // ── 열쇠탭 인계자 선택기 ──
 function renderHandoverChips(){
   const names=personnel3.map(p=>p.name);
-  const cols=names.length<=4?2:names.length<=9?3:4;
-  const gs='display:grid;grid-template-columns:repeat('+cols+',1fr);gap:8px;margin-top:6px;';
   // 상키 인계자 — 하키 선택 제외
   const el=document.getElementById('handoverChips');
   if(el){
     if(names.length){
       const avail=names.filter(n=>n!==selectedHandoverPerson2);
+      const gs=personGridStyle(avail.length);
       el.innerHTML='<div class="pchip-grid" style="'+gs+'">'
         +avail.map(p=>'<div class="person-chip'+(selectedHandoverPerson===p?' selected':'')+'" onclick="toggleHandoverPerson(\''+escapeHtml(p)+'\')">'+escapeHtml(p)+'</div>').join('')+'</div>';
-      if(selectedHandoverPerson){const g=el.querySelector('.pchip-grid');if(g)_chipGridSelect(g,selectedHandoverPerson,()=>renderHandoverChips());}
     }else{el.innerHTML='<span style="font-size:12px;color:#aaa;">설정 > 인계자 관리에서 추가하세요</span>';}
   }
   // 하키 인계자 — 상키 선택 제외
@@ -1514,19 +1536,50 @@ function renderHandoverChips(){
   if(el2){
     if(names.length){
       const avail2=names.filter(n=>n!==selectedHandoverPerson);
-      el2.innerHTML='<div class="pchip-grid" style="'+gs+'">'
-        +avail2.map(p=>'<div class="person-chip'+(selectedHandoverPerson2===p?' selected':'')+'" onclick="toggleHandoverPerson2(\''+escapeHtml(p)+'\')">'+escapeHtml(p)+'</div>').join('')+'</div>';
-      if(selectedHandoverPerson2){const g2=el2.querySelector('.pchip-grid');if(g2)_chipGridSelect(g2,selectedHandoverPerson2,()=>renderHandoverChips());}
+      const gs2=personGridStyle(avail2.length);
+      el2.innerHTML='<div class="pchip-grid" style="'+gs2+'">'
+        +avail2.map(p=>{
+          const isSel=p==='상황병'?selectedHandoverPerson2.startsWith('상황병'):selectedHandoverPerson2===p;
+          return '<div class="person-chip'+(isSel?' selected':'')+'" onclick="toggleHandoverPerson2(\''+escapeHtml(p)+'\')">'+escapeHtml(p)+'</div>';
+        }).join('')+'</div>';
     }else{el2.innerHTML='<span style="font-size:12px;color:#aaa;">설정 > 인계자 관리에서 추가하세요</span>';}
   }
 }
+// ── 열쇠 역할 아코디언 ──
+function toggleKeyRole(id){
+  const el=document.getElementById(id);if(!el)return;
+  const show=el.style.display==='none';
+  el.style.display=show?'':'none';
+  const arrow=document.getElementById(id+'Arrow');
+  if(arrow)arrow.classList.toggle('open',show);
+}
+function updateKeyRoleLabels(){
+  const lbl=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val||'선택';};
+  lbl('handoverChipsVal',selectedHandoverPerson);
+  lbl('handoverChips2Val',selectedHandoverPerson2);
+  lbl('keyPersonSelectorVal',[...selectedKeyPersons][0]);
+  lbl('keyPersonSelector2Val',selectedKeyReceiver2);
+}
+function collapseKeyRole(id){
+  const el=document.getElementById(id);if(el)el.style.display='none';
+  const arrow=document.getElementById(id+'Arrow');if(arrow)arrow.classList.remove('open');
+}
 function toggleHandoverPerson(name){
   selectedHandoverPerson=selectedHandoverPerson===name?'':name;
-  renderHandoverChips();
+  if(selectedHandoverPerson)collapseKeyRole('handoverChips');
+  renderHandoverChips();updateKeyRoleLabels();
 }
 function toggleHandoverPerson2(name){
-  selectedHandoverPerson2=selectedHandoverPerson2===name?'':name;
-  renderHandoverChips();
+  if(name==='상황병'){
+    // 상황병 선택 시 이름 입력 팝업
+    const input=prompt('상황병 이름을 입력하세요:');
+    if(!input||!input.trim()){selectedHandoverPerson2='';renderHandoverChips();updateKeyRoleLabels();return;}
+    selectedHandoverPerson2='상황병('+input.trim()+')';
+  }else{
+    selectedHandoverPerson2=selectedHandoverPerson2===name?'':name;
+  }
+  if(selectedHandoverPerson2)collapseKeyRole('handoverChips2');
+  renderHandoverChips();updateKeyRoleLabels();
 }
 
 // ── 세부키 편집기 ──
@@ -1618,20 +1671,48 @@ async function removeCatalogKey(group, keyId){
 function renderPersonButtons(){
   renderHandoverChips();
   renderKeyPersonSelector();
-  renderHeldKeySelector();
   updateKeyBtns();
 }
 // ── 세부 키 선택기 (수령용) ──
 function renderKeyDetailSelector(){
   const el=document.getElementById('keyDetails');if(!el)return;
-  if(!selectedKeyGroup){el.innerHTML='<span style="font-size:12px;color:#aaa;">열쇠 그룹을 선택하세요</span>';updateKeyBtns();return;}
-  const keys=getGroupKeys(selectedKeyGroup);
-  if(!keys.length){el.innerHTML='<span style="font-size:12px;color:#aaa;">세부 키가 없습니다. 설정에서 추가하세요</span>';updateKeyBtns();return;}
-  el.innerHTML=keys.map(k=>{
-    const sel=selectedIssueKeyIds.has(k.id);
-    return '<div class="person-chip'+(sel?' selected':'')+'" onclick="toggleIssueKey(\''+k.id+'\')" style="font-size:13px;">'+escapeHtml(makeKeyLabel(selectedKeyGroup,k))+'</div>';
-  }).join('');
+  if(!selectedKeyGroups.size){el.innerHTML='<span style="font-size:12px;color:#aaa;">열쇠 그룹을 선택하세요</span>';updateKeyBtns();return;}
+  // 그룹별 → 서브그룹(name)별 묶음
+  let html='';
+  selectedKeyGroups.forEach(group=>{
+    const keys=getGroupKeys(group);
+    if(!keys.length)return;
+    // name별로 서브그룹 분류
+    const subs=new Map();
+    keys.forEach(k=>{
+      const sub=k.name||group;
+      if(!subs.has(sub))subs.set(sub,[]);
+      subs.get(sub).push(k);
+    });
+    subs.forEach((subKeys,subName)=>{
+      // 서브그룹 헤더 (그룹명과 다를 때만 표시, 같으면 그룹명만)
+      const label=subName===group?group:group+' / '+subName;
+      html+='<div class="key-sub-header">'+escapeHtml(label)
+        +'<button class="key-sub-toggle" onclick="toggleSubKeys(\''+escapeHtml(group)+'\',\''+escapeHtml(subName)+'\')">'
+        +(subKeys.every(k=>selectedIssueKeyIds.has(k.id))?'전체해제':'전체선택')+'</button></div>';
+      const gs=personGridStyle(subKeys.length);
+      html+='<div class="pchip-grid" style="'+gs+'">';
+      subKeys.forEach(k=>{
+        const sel=selectedIssueKeyIds.has(k.id);
+        html+='<div class="person-chip'+(sel?' selected':'')+'" onclick="toggleIssueKey(\''+k.id+'\')" style="font-size:13px;">'+escapeHtml(k.number||k.name)+'</div>';
+      });
+      html+='</div>';
+    });
+  });
+  if(!html){el.innerHTML='<span style="font-size:12px;color:#aaa;">세부 키가 없습니다. 설정에서 추가하세요</span>';updateKeyBtns();return;}
+  el.innerHTML=html;
   updateKeyBtns();
+}
+function toggleSubKeys(group,subName){
+  const keys=getGroupKeys(group).filter(k=>(k.name||group)===subName);
+  const allSel=keys.every(k=>selectedIssueKeyIds.has(k.id));
+  keys.forEach(k=>{if(allSel)selectedIssueKeyIds.delete(k.id);else selectedIssueKeyIds.add(k.id);});
+  renderKeyDetailSelector();updateKeyBtns();
 }
 function toggleIssueKey(keyId){
   if(selectedIssueKeyIds.has(keyId))selectedIssueKeyIds.delete(keyId);
@@ -1639,29 +1720,11 @@ function toggleIssueKey(keyId){
   renderKeyDetailSelector();updateKeyBtns();
 }
 
-// ── 보유 중 키 선택기 (반납용) ──
-function renderHeldKeySelector(){
-  const el=document.getElementById('keyHeldDetails');if(!el)return;
-  const holder=getSelectedKeyHolder();
-  if(!holder){el.innerHTML='<span style="font-size:12px;color:#aaa;">인수자를 선택하세요</span>';updateKeyBtns();return;}
-  const held=getHolderHeldKeys(holder);
-  if(!held.length){el.innerHTML='<span style="font-size:12px;color:#aaa;">보유 중인 키 없음</span>';updateKeyBtns();return;}
-  el.innerHTML=held.map(k=>{
-    const sel=selectedReturnKeyIds.has(k.sig);
-    return '<div class="person-chip'+(sel?' selected':'')+'" onclick="toggleReturnKey(\''+escapeHtml(k.sig)+'\')" style="font-size:13px;">'+escapeHtml([k.group,k.key_name,k.key_number].filter(Boolean).join(' / '))+'</div>';
-  }).join('');
-  updateKeyBtns();
-}
-function toggleReturnKey(sig){
-  if(selectedReturnKeyIds.has(sig))selectedReturnKeyIds.delete(sig);
-  else selectedReturnKeyIds.add(sig);
-  renderHeldKeySelector();updateKeyBtns();
-}
 
 function renderKeyPresets(){
   ensureKeyCatalog();
   const el=document.getElementById('keyPresets');if(!el)return;
-  el.innerHTML=keyPresets.map(k=>'<div class="preset-btn'+(selectedKeyGroup===k?' selected':'')+'" onclick="selectKey(\''+k+'\')" id="kp-'+k+'">'+k+'</div>').join('');
+  el.innerHTML=keyPresets.map(k=>'<div class="preset-btn'+(selectedKeyGroups.has(k)?' selected':'')+'" onclick="selectKey(\''+k+'\')" id="kp-'+k+'">'+k+'</div>').join('');
 }
 function renderSettingList(elId, arr, labelFn, deleteFn, tag){
   const el=document.getElementById(elId);if(!el)return;
@@ -1746,43 +1809,39 @@ function setupSettingDrag(container, arr, tag){
 }
 
 function selectKey(name){
-  const prev=selectedKeyGroup;
-  selectedKeyGroup=selectedKeyGroup===name?null:name;
-  selectedIssueKeyIds.clear();
-  // 그룹 새로 선택 시 전체 키 자동 선택
-  if(selectedKeyGroup&&selectedKeyGroup!==prev){
-    getGroupKeys(selectedKeyGroup).forEach(k=>selectedIssueKeyIds.add(k.id));
+  if(selectedKeyGroups.has(name)){
+    selectedKeyGroups.delete(name);
+    // 해제된 그룹의 키 ID 제거
+    getGroupKeys(name).forEach(k=>selectedIssueKeyIds.delete(k.id));
+  }else{
+    selectedKeyGroups.add(name);
+    // 새 그룹의 전체 키 자동 선택
+    getGroupKeys(name).forEach(k=>selectedIssueKeyIds.add(k.id));
   }
   renderKeyPresets();renderKeyDetailSelector();updateKeyBtns();
 }
 
 // ── 열쇠 ──
-async function addKey(action){
+async function addKey(){
   const holder=getSelectedKeyHolder();
   if(!holder){toast('대상자를 선택하세요');return;}
+  if(!selectedKeyGroups.size||!selectedIssueKeyIds.size){toast('수령할 세부 키를 선택하세요');return;}
+  const allKeys=[];
+  selectedKeyGroups.forEach(g=>{getGroupKeys(g).filter(k=>selectedIssueKeyIds.has(k.id)).forEach(k=>allKeys.push({...k,_group:g}));});
+  const heldSigs=new Set(getCurrentHeldKeyEntries().map(k=>k.sig));
+  const t=nowTime();
+  const batchId='kb'+Date.now();
   const created=[];
-  if(action==='issue'){
-    if(!selectedKeyGroup||!selectedIssueKeyIds.size){toast('수령할 세부 키를 선택하세요');return;}
-    const keys=getGroupKeys(selectedKeyGroup).filter(k=>selectedIssueKeyIds.has(k.id));
-    const heldSigs=new Set(getCurrentHeldKeyEntries().map(k=>k.sig));
-    const t=nowTime();
-    const batchId='kb'+Date.now(); // 같은 수령 묶음 ID
-    for(const key of keys){
-      const ev={time:t,type:'key',action:'issue',subject:holder,handover:selectedHandoverPerson,handover2:selectedHandoverPerson2,receiver2:selectedKeyReceiver2,location:selectedKeyGroup,key_id:key.id,key_name:key.name,key_number:key.number,batch_id:batchId};
-      if(heldSigs.has(keySigFromEvent(ev))){toast(makeKeyLabel(selectedKeyGroup,key)+' 는 이미 보유 중입니다');continue;}
-      events.push(ev);created.push(ev);
-    }
-  }else{
-    const held=getHolderHeldKeys(holder).filter(k=>selectedReturnKeyIds.has(k.sig));
-    if(!held.length){toast('반납할 키를 선택하세요');return;}
-    const t=nowTime();
-    held.forEach(k=>{const ev={time:t,type:'key',action:'return',subject:holder,location:k.group,key_id:k.key_id,key_name:k.key_name,key_number:k.key_number};events.push(ev);created.push(ev);});
+  for(const key of allKeys){
+    const ev={time:t,type:'key',action:'issue',subject:holder,handover:selectedHandoverPerson,handover2:selectedHandoverPerson2,receiver2:selectedKeyReceiver2,location:key._group,key_id:key.id,key_name:key.name,key_number:key.number,batch_id:batchId};
+    if(heldSigs.has(keySigFromEvent(ev))){toast(makeKeyLabel(key._group,key)+' 는 이미 보유 중입니다');continue;}
+    events.push(ev);created.push(ev);
   }
   if(!created.length)return;
   const recent=JSON.parse(localStorage.getItem('keyRecentUse')||'{}');recent[holder]=Date.now();localStorage.setItem('keyRecentUse',JSON.stringify(recent));
-  if(await saveEvents()){toast('열쇠 '+(action==='issue'?'수령':'반납')+' '+holder);renderTimeline();renderKeyBoard();}
+  if(await saveEvents()){toast('열쇠 수령 '+holder);renderTimeline();renderKeyBoard();}
   else{created.forEach(()=>events.pop());toast('저장 실패. 다시 시도해주세요.');}
-  selectedIssueKeyIds.clear();selectedReturnKeyIds.clear();renderKeyDetailSelector();renderHeldKeySelector();renderPersonButtons();
+  selectedIssueKeyIds.clear();renderKeyDetailSelector();renderPersonButtons();
 }
 function renderKeyBoard(){
   const board=document.getElementById('keyBoard');if(!board)return;
@@ -1816,8 +1875,13 @@ function renderKeyBoard(){
 
   board.innerHTML=groups.map(g=>{
     const label=escapeHtml(g.subject||'');
-    const keyNames=g.keys.map(k=>[k.key_name,k.key_number].filter(Boolean).join(' ')).join(' · ');
-    const meta=escapeHtml(g.location)+(keyNames?' / '+escapeHtml(keyNames):'');
+    // 서브그룹별 개수 요약
+    const subCounts={};
+    g.keys.forEach(k=>{const n=k.key_name||g.location;subCounts[n]=(subCounts[n]||0)+1;});
+    const entries=Object.entries(subCounts);
+    const meta=entries.length===1&&entries[0][0]===g.location
+      ?escapeHtml(g.location)+' '+g.keys.length+'개'
+      :escapeHtml(g.location)+' — '+entries.map(([n,c])=>escapeHtml(n)+' '+c+'개').join(', ');
     const idxs=g.keys.map(k=>k.idx).join(',');
     const subE=String(g.subject||'').replace(/'/g,"&#39;");
     const locE=String(g.location||'').replace(/'/g,"&#39;");
@@ -1833,8 +1897,9 @@ async function returnKeyGroup(subject,location){
   const held=getHolderHeldKeys(subject).filter(k=>k.group===location);
   if(!held.length){toast('반납할 키가 없습니다');return;}
   const t=nowTime();
-  held.forEach(k=>{events.push({time:t,type:'key',action:'return',subject,location,key_id:k.key_id,key_name:k.key_name,key_number:k.key_number});});
-  if(await saveEvents()){toast(subject+' '+location+' 전체 반납 ('+held.length+'개)');renderTimeline();renderKeyBoard();renderHeldKeySelector();}
+  const batchId='kr'+Date.now(); // 반납 묶음 ID
+  held.forEach(k=>{events.push({time:t,type:'key',action:'return',subject,location,key_id:k.key_id,key_name:k.key_name,key_number:k.key_number,batch_id:batchId});});
+  if(await saveEvents()){toast(subject+' '+location+' 전체 반납 ('+held.length+'개)');renderTimeline();renderKeyBoard();}
   else{held.forEach(()=>events.pop());toast('저장 실패.');}
 }
 async function deleteKeyGroup(idxListStr){
@@ -1856,7 +1921,7 @@ async function returnKey(subject,location,keyId){
   const held=getHolderHeldKeys(subject).find(k=>k.group===location&&(!keyId||k.key_id===keyId));
   if(!held){toast('반납할 키를 찾지 못했습니다');return;}
   events.push({time:nowTime(),type:'key',action:'return',subject,location,key_id:held.key_id,key_name:held.key_name,key_number:held.key_number});
-  if(await saveEvents()){toast(subject+' '+location+' 반납');renderTimeline();renderKeyBoard();renderHeldKeySelector();}else events.pop();
+  if(await saveEvents()){toast(subject+' '+location+' 반납');renderTimeline();renderKeyBoard();}else events.pop();
 }
 function renderOTSummary(){
   const total=document.getElementById('otTodayTotal');
@@ -1869,7 +1934,7 @@ function switchEntryTab(tab){
   document.getElementById('keyPanel').style.display=tab==='key'?'':'none';
   document.getElementById('subTabEntry').classList.toggle('active',tab==='entry');
   document.getElementById('subTabKey').classList.toggle('active',tab==='key');
-  if(tab==='key'){renderKeyBoard();renderKeyPersonSelector();renderKeyPersonSelector2();renderKeyPresets();renderKeyDetailSelector();renderHeldKeySelector();}
+  if(tab==='key'){renderKeyBoard();renderKeyPersonSelector();renderKeyPersonSelector2();renderKeyPresets();renderKeyDetailSelector();}
 }
 function switchCalTab(tab){
   document.getElementById('calPanel').style.display=tab==='cal'?'':'none';
@@ -1971,6 +2036,7 @@ async function deleteChecked(){
   idxs.forEach(i=>events.splice(i,1));
   if(await saveEvents()){
     checkedEvents.clear();
+    syncBoardTimersAfterDelete();
     document.getElementById('multiDelBar').classList.remove('show');
     toast(idxs.length+'건 삭제');
     renderTimeline();renderEntryBoard();renderKeyBoard();renderAllBoards();
@@ -1978,8 +2044,41 @@ async function deleteChecked(){
     events=bk;toast('저장 실패.');renderTimeline();
   }
 }
+// ── 보드타이머 ↔ 이벤트 동기화 ──
+function syncBoardTimersAfterDelete(){
+  // 완료된 보드타이머 중 대응하는 이벤트가 없으면 제거
+  let changed=false;
+  Object.keys(boardTimers).forEach(id=>{
+    const t=boardTimers[id];
+    if(!t.done)return; // 진행 중 타이머는 유지
+    // 대응 이벤트 존재 확인 (category+persons+startClock)
+    const match=events.some(ev=>{
+      if(t.category==='entry')return ev.type==='entry'&&ev.time===t.startClock;
+      if(t.category==='patrol')return ev.type==='patrol'&&ev.subject===t.persons;
+      if(t.category==='cctv')return ev.type==='cctv'&&ev.subject===t.persons;
+      return false;
+    });
+    if(!match){delete boardTimers[id];changed=true;}
+  });
+  if(changed)saveBoardState();
+}
 // ── 삭제/추가 ──
-async function deleteEvent(idx){if(!confirm('삭제할까요?'))return;const bk=[...events];events.splice(idx,1);if(await saveEvents()){checkedEvents.delete(idx);toast('삭제');renderTimeline();renderEntryBoard();renderKeyBoard();renderAllBoards();}else{events=bk;toast('저장 실패. 다시 시도해주세요.');renderTimeline();}}
+async function deleteEvent(idx){
+  if(!confirm('삭제할까요?'))return;
+  const bk=[...events];
+  const ev=events[idx];
+  const batchId=ev&&ev.batch_id;
+  if(batchId){
+    // batch_id가 있으면 같은 묶음 전체 삭제
+    const batchCount=events.filter(e=>e.batch_id===batchId).length;
+    if(batchCount>1&&!confirm(batchCount+'개 키가 묶음 수령/반납됩니다. 전체 삭제할까요?'))return;
+    events=events.filter(e=>e.batch_id!==batchId);
+  }else{
+    events.splice(idx,1);
+  }
+  if(await saveEvents()){checkedEvents.delete(idx);syncBoardTimersAfterDelete();toast('삭제');renderTimeline();renderEntryBoard();renderKeyBoard();renderAllBoards();}
+  else{events=bk;toast('저장 실패. 다시 시도해주세요.');renderTimeline();}
+}
 function _refreshPersonViews(){renderPersonButtons();renderSettings();renderEntryForm();renderPersonChips('patrol');renderPersonChips('cctv');renderPersonChips('ot');renderHvReceiverChips();renderHvGiverChips();}
 async function addPerson(){const n=document.getElementById('newPersonName').value.trim();if(!n)return;personnel.push({name:n});document.getElementById('newPersonName').value='';if(await savePersonnel()){toast(n+' 추가');_refreshPersonViews();}else{personnel.pop();document.getElementById('newPersonName').value=n;toast('저장 실패.');}}
 async function removePerson(i){if(!confirm(personnel[i].name+' 삭제?'))return;const bk=[...personnel];personnel.splice(i,1);if(await savePersonnel()){_refreshPersonViews();}else{personnel=bk;toast('저장 실패.');renderSettings();}}
@@ -2028,7 +2127,7 @@ function toggleAddForm(ctx){
   const open=body.style.display!=='none';
   body.style.display=open?'none':'block';
   if(icon)icon.textContent=open?'expand_more':'expand_less';
-  if(!open&&ctx==='key'){renderHandoverChips();renderKeyPersonSelector();renderKeyDetailSelector();renderHeldKeySelector();updateKeyBtns();}
+  if(!open&&ctx==='key'){renderHandoverChips();renderKeyPersonSelector();renderKeyDetailSelector();updateKeyBtns();}
   if(!open&&ctx==='ot'){makeTimePicker('otBaseTp');makeTimePicker('otEndTp');}
   if(!open&&ctx==='manual-entry'){makeTimePicker('mEntryTimeTp');}
   if(!open&&ctx==='manual-key'){makeTimePicker('mKeyTimeTp');}
@@ -2496,7 +2595,167 @@ function importData(event){
   reader.readAsText(file);
 }
 
-init();
+function buildTestSeedData(){
+  const today=todayLocal();
+  const yesterday=dateShift(today,-1);
+  const twoDaysAgo=dateShift(today,-2);
+  const tomorrow=dateShift(today,1);
+  const nextWeek=dateShift(today,7);
+  const now=Date.now();
+  return {
+    version:2,
+    personnel:{
+      personnel:[{name:'김민준'},{name:'박도윤'},{name:'이준호'},{name:'최서준'},{name:'정현우'},{name:'한지훈'}],
+      personnel2:[{name:'오지훈'},{name:'임태윤'},{name:'배성민'},{name:'윤건우'}],
+      personnel3:[{name:'하사 김태성'},{name:'중사 이정민'},{name:'상병 박시우'}],
+      personnel4:[{id:now+1,name:'중위 강민석'},{id:now+2,name:'원사 조현수'},{id:now+3,name:'상사 백승호'}],
+      key_presets:['탄약고','정문','후문','무기고','의무실','통신실'],
+      entry_types:['탄약고','무기고','정문','후문','통신실','의무실','상황실'],
+      key_catalog:[
+        {group:'탄약고',keys:[{id:'ammo_1a',name:'탄약고',number:'1번 상'},{id:'ammo_1b',name:'탄약고',number:'1번 하'},{id:'ammo_2a',name:'탄약고',number:'2번 상'},{id:'ammo_2b',name:'탄약고',number:'2번 하'}]},
+        {group:'정문',keys:[{id:'main_1',name:'정문',number:'1번'},{id:'main_2',name:'정문',number:'2번'}]},
+        {group:'후문',keys:[{id:'rear_1',name:'후문',number:'1번'},{id:'rear_2',name:'후문',number:'2번'}]},
+        {group:'무기고',keys:[{id:'arm_1a',name:'무기고',number:'1번 상'},{id:'arm_1b',name:'무기고',number:'1번 하'},{id:'arm_2a',name:'무기고',number:'2번 상'},{id:'arm_2b',name:'무기고',number:'2번 하'}]},
+        {group:'의무실',keys:[{id:'med_1',name:'의무실',number:'1번'}]},
+        {group:'통신실',keys:[{id:'sig_1',name:'통신실',number:'1번'}]}
+      ]
+    },
+    boardTimers:{
+      1001:{category:'entry',type:'정문',persons:'김민준, 오지훈',elapsed:32*60000,paused:false,done:false,note:'외곽 순찰조 복귀 예정',startClock:'09:10',endAt:0,date:today},
+      1002:{category:'patrol',type:'야간 순찰',persons:'이준호',elapsed:18*60000,paused:false,done:false,note:'탄약고-후문 라인 점검 중',startClock:'09:24',endAt:0,date:today},
+      1003:{category:'cctv',type:'CCTV 점검',persons:'박도윤',elapsed:11*60000,paused:true,done:false,note:'2번 채널 화면 흔들림 확인 필요',startClock:'08:55',endAt:0,date:today}
+    },
+    event_dates:[twoDaysAgo,yesterday,today,tomorrow,nextWeek],
+    events_by_date:{
+      [twoDaysAgo]:{
+        date:twoDaysAgo,
+        events:[
+          {time:'07:40',type:'entry',action:'입장',subject:'김민준',subject2:'오지훈',location:'정문'},
+          {time:'08:10',type:'patrol',action:'stop',subject:'이준호',duration:'00:28',note:'외곽 울타리 이상 없음'},
+          {time:'10:35',type:'cctv',action:'stop',subject:'박도윤',duration:'00:17',note:'창고동 3번 카메라 렌즈 청소'},
+          {time:'14:20',type:'handover',handover:'하사 김태성',subject:'중위 강민석',note:'열쇠 보관함 이상 없음'}
+        ]
+      },
+      [yesterday]:{
+        date:yesterday,
+        events:[
+          {time:'06:55',type:'entry',action:'입장',subject:'정현우',subject2:'배성민',location:'후문'},
+          {time:'07:22',type:'entry',action:'퇴장',subject:'정현우',subject2:'배성민',location:'후문'},
+          {time:'08:40',type:'patrol',action:'stop',subject:'김민준',duration:'00:31',note:'서측 담장 이상 없음'},
+          {time:'09:15',type:'cctv',action:'stop',subject:'박도윤',duration:'00:21',note:'본부 현관 카메라 각도 조정'},
+          {time:'11:10',type:'key',action:'issue',subject:'중위 강민석',location:'무기고',key_name:'무기고',key_number:'1번 상',batch_id:'batch_y_arm'},
+          {time:'11:10',type:'key',action:'issue',subject:'중위 강민석',location:'무기고',key_name:'무기고',key_number:'1번 하',batch_id:'batch_y_arm'},
+          {time:'16:35',type:'key',action:'return',subject:'중위 강민석',location:'무기고',key_name:'무기고',key_number:'1번 상',batch_id:'batch_y_arm'},
+          {time:'16:35',type:'key',action:'return',subject:'중위 강민석',location:'무기고',key_name:'무기고',key_number:'1번 하',batch_id:'batch_y_arm'},
+          {time:'18:10',type:'handover',handover:'중사 이정민',subject:'원사 조현수',note:'CCTV 점검표 인계 완료'}
+        ]
+      },
+      [today]:{
+        date:today,
+        events:[
+          {time:'06:30',type:'entry',action:'입장',subject:'김민준',subject2:'오지훈',location:'정문'},
+          {time:'07:45',type:'entry',action:'외출',subject:'최서준',subject2:'임태윤',location:'후문',note:'군수품 수령'},
+          {time:'08:05',type:'patrol',action:'stop',subject:'이준호',duration:'00:24',note:'탄약고 외곽 점검 완료'},
+          {time:'08:50',type:'cctv',action:'stop',subject:'박도윤',duration:'00:15',note:'생활관 복도 카메라 상태 양호'},
+          {time:'09:00',type:'key',action:'issue',subject:'중위 강민석',location:'탄약고',key_name:'탄약고',key_number:'1번 상',batch_id:'batch_t_ammo'},
+          {time:'09:00',type:'key',action:'issue',subject:'중위 강민석',location:'탄약고',key_name:'탄약고',key_number:'1번 하',batch_id:'batch_t_ammo'},
+          {time:'09:35',type:'handover',handover:'하사 김태성',subject:'원사 조현수',note:'정문 통제 현황 인계'}
+        ]
+      },
+      [tomorrow]:{
+        date:tomorrow,
+        events:[
+          {time:'09:00',type:'other',action:'note',subject:'정기 점검 예정',note:'테스트 일정용 메모'}
+        ]
+      },
+      [nextWeek]:{
+        date:nextWeek,
+        events:[
+          {time:'13:00',type:'other',action:'note',subject:'월간 훈련 준비',note:'장비 점검 계획 확인'}
+        ]
+      }
+    },
+    ot_by_date:{
+      [yesterday]:[
+        {id:'ot_y_1',subject:'김민준',start_time:'18:00',end_time:'20:30',note:'훈련장 정리'},
+        {id:'ot_y_2',subject:'박도윤',start_time:'18:30',end_time:'21:00',note:'CCTV 점검 보고서 작성'}
+      ],
+      [today]:[
+        {id:'ot_t_1',subject:'이준호',start_time:'18:00',end_time:'21:20',note:'탄약고 경계 지원'},
+        {id:'ot_t_2',subject:'최서준',start_time:'19:00',end_time:'22:10',note:'야간 통신 장비 점검'}
+      ]
+    },
+    schedules:[
+      {id:now+10,date:today,title:'아침 인수인계',time:'08:30',note:'상황실 및 열쇠 현황 보고',color:'#0097a7',type:'일반'},
+      {id:now+11,date:today,title:'탄약고 정기 점검',time:'10:00',note:'점검표 작성 포함',color:'#f0b429',type:'일반'},
+      {id:now+12,date:tomorrow,title:'주간 근무 편성 확인',time:'09:30',note:'근무표 최신본 검토',color:'#1565c0',type:'근무'},
+      {id:now+13,date:nextWeek,title:'대대 훈련 지원',time:'14:00',note:'차량/장비 통제 협조',color:'#c62828',type:'행사'}
+    ],
+    offDays:[nextWeek],
+    appTheme:'dark'
+  };
+}
+
+function listSeededStorageKeys(){
+  return Object.keys(localStorage).filter(k=>
+    k==='personnel'||
+    k==='boardTimers'||
+    k==='event_dates'||
+    k==='schedules'||
+    k==='offDays'||
+    k==='appTheme'||
+    k.startsWith('events_')||
+    k.startsWith('overtime_')
+  );
+}
+
+function seedTestData(){
+  const backup={};
+  listSeededStorageKeys().forEach(k=>{backup[k]=localStorage.getItem(k);});
+  localStorage.setItem('maru_test_seed_backup_v1',JSON.stringify(backup));
+  const data=buildTestSeedData();
+  localStorage.setItem('personnel',JSON.stringify(data.personnel));
+  localStorage.setItem('boardTimers',JSON.stringify(data.boardTimers));
+  localStorage.setItem('event_dates',JSON.stringify(data.event_dates));
+  Object.entries(data.events_by_date).forEach(([d,ev])=>localStorage.setItem('events_'+d,JSON.stringify(ev)));
+  Object.entries(data.ot_by_date).forEach(([d,ot])=>localStorage.setItem('overtime_'+d,JSON.stringify(ot)));
+  localStorage.setItem('schedules',JSON.stringify(data.schedules));
+  localStorage.setItem('offDays',JSON.stringify(data.offDays));
+  localStorage.setItem('appTheme',data.appTheme);
+}
+
+function restoreTestSeedBackup(){
+  const raw=localStorage.getItem('maru_test_seed_backup_v1');
+  if(!raw) return false;
+  const backup=JSON.parse(raw);
+  listSeededStorageKeys().forEach(k=>localStorage.removeItem(k));
+  Object.entries(backup).forEach(([k,v])=>{
+    if(v===null||typeof v==='undefined') return;
+    localStorage.setItem(k,v);
+  });
+  return true;
+}
+
+function maybeHandleSeedTools(){
+  const params=new URLSearchParams(location.search);
+  if(params.get('seedTest')==='1'){
+    seedTestData();
+    const next=new URL(location.href);
+    next.searchParams.delete('seedTest');
+    location.replace(next.toString());
+    return true;
+  }
+  if(params.get('restoreSeedBackup')==='1'){
+    restoreTestSeedBackup();
+    const next=new URL(location.href);
+    next.searchParams.delete('restoreSeedBackup');
+    location.replace(next.toString());
+    return true;
+  }
+  return false;
+}
+
+if(!maybeHandleSeedTools()) init();
 
 // 날짜 자동 갱신 - 화면 켜거나 탭 포커스 시 체크
 document.addEventListener('visibilitychange',()=>{
